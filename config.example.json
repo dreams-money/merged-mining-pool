@@ -1,0 +1,54 @@
+{
+    "pool_name": "Merged Mining",
+    "port": ":3643",
+    "max_connections": 99,
+    "connection_timeout": "10s",
+    "pool_difficulty": 2000,
+    "block_signature": "U'll fail U'll get back up Show your face to this defeat W ur chin high",
+    "blockchains": {
+        "dogecoin": [
+            {
+                "name": "localhost",
+                "rpc_url": "http://127.0.0.1:44555",
+                "rpc_username": "asdf",
+                "rpc_password": "asdf",
+                "block_notify_url": "tcp://localhost:1222",
+                "timeout": "10s",
+                "reward_address": "nc9AHNBPksJbf6wig78zE8BMmKND6hLvnc"
+            },
+            {
+                "name": "backup",
+                "rpc_url": "http://192.1.1.1:44555",
+                "rpc_username": "asdf",
+                "rpc_password": "asdf",
+                "block_notify_url": "tcp://localhost:1222",
+                "timeout": "10s",
+                "reward_address": "nc9AHNBPksJbf6wig78zE8BMmKND6hLvnc"
+            }
+        ],
+        "litecoin": [
+            {
+                "name": "localhost",
+                "rpc_url": "http://127.0.0.1:44555",
+                "rpc_username": "asdf",
+                "rpc_password": "asdf",
+                "block_notify_url": "tcp://localhost:1222",
+                "timeout": "10s",
+                "reward_address": "tltc1qyxmwasu29zxde5cuyc6m603c2x2lxlm0cq3gx7"
+            },
+            {
+                "name": "backup",
+                "rpc_url": "http://192.1.1.1:44555",
+                "rpc_username": "asdf",
+                "rpc_password": "asdf",
+                "block_notify_url": "tcp://localhost:1222",
+                "timeout": "10s",
+                "reward_address": "tltc1qyxmwasu29zxde5cuyc6m603c2x2lxlm0cq3gx7"
+            }
+        ]
+    },
+    "merged_blockchain_order": [
+        "dogecoin",
+        "litecoin"
+    ]
+}
