@@ -5,6 +5,8 @@ import (
 	"fmt"
 )
 
+// https://developer.bitcoin.org/reference/transactions.html#coinbase-input-the-input-of-the-first-transaction-in-a-block
+
 type CoinbaseInital struct {
 	Version                     string
 	NumberOfInputs              string

@@ -2,6 +2,8 @@ package bitcoin
 
 import "encoding/hex"
 
+// https://developer.bitcoin.org/reference/block_chain.html#block-headers
+
 func blockHeader(version uint, previousBlockHash, merkleRootHex, nTime, bits, nonce string) (string, error) {
 	versionBytes := fourLittleEndianBytes(version)
 

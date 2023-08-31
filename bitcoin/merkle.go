@@ -4,6 +4,28 @@ import (
 	"encoding/hex"
 )
 
+// https://developer.bitcoin.org/reference/block_chain.html#merkle-trees
+
+/*******************************************
+*******  Merkle Illustration ***************
+********************************************
+
+
+a   b c   d	e	f <- level1
+ \ /   \ /   \ /
+  G     H     I   G  <- double up if odd (level2)
+   \   /       \ /
+     J          K <- level3,
+	             ... level4,
+			     ... levelN
+      \___   __/
+	      \ /
+           L
+
+	Steps is G, J, L
+
+********************************************/
+
 func (t *Template) MerkleSteps() ([]string, error) {
 	transactionIDs := make([]string, len(t.Transactions))
 	for i, transaction := range t.Transactions {

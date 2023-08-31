@@ -7,6 +7,8 @@ type Submission struct {
 	TransactionBuffer string
 }
 
+// https://developer.bitcoin.org/reference/block_chain.html#serialized-blocks
+
 func (s *Submission) Serialize() string {
 	return s.Header +
 		s.TransactionCount +

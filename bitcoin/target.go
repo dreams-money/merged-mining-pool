@@ -7,6 +7,8 @@ import (
 	"strconv"
 )
 
+// https://developer.bitcoin.org/reference/block_chain.html#target-nbits
+
 type Target string
 
 const highestTarget = "00000000ffff0000000000000000000000000000000000000000000000000000"
