@@ -4,11 +4,14 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"designs.capital/dogepool/bitcoin"
 )
 
 type RPCClient struct {
@@ -109,26 +112,8 @@ func (r *RPCClient) GetPeerCount() (int64, error) { // getconnectioncount
 	return n, nil
 }
 
-type Transaction struct {
-	Data string `json:"data"`
-	ID   string `json:"txid"`
-	Fee  int    `json:"fee"`
-}
-
-type BlockTemplate struct {
-	Version                  int           `json:"version"`
-	PrevBlockHash            string        `json:"previousblockhash"`
-	Height                   uint64        `json:"height"`
-	CoinBaseValue            int           `json:"coinbasevalue"`
-	DefaultWitnessCommitment string        `json:"default_witness_commitment"`
-	Bits                     string        `json:"bits"`
-	Target                   string        `json:"target"`
-	Transactions             []Transaction `json:"transactions"`
-	CurrentTime              uint          `json:"curtime"`
-}
-
-func (r *RPCClient) GetBlockTemplate() (BlockTemplate, error) {
-	var blockTemplate BlockTemplate
+func (r *RPCClient) GetBlockTemplate() (bitcoin.Template, error) {
+	var blockTemplate bitcoin.Template
 
 	params := make([]interface{}, 1)
 	rules := make(map[string][]string)
@@ -248,8 +233,11 @@ func (r *RPCClient) SubmitBlock(submission []interface{}) (bool, error) {
 		return false, err
 	}
 
-	if status != 200 || string(resp.Result) != "null" {
-		return false, errors.New(string(resp.Result))
+	result := string(resp.Result)
+	if status != 200 || result != "null" {
+		m := "HTTP (%v) %v error-msg: %v"
+		m = fmt.Sprintf(m, status, result, resp.Error.Message)
+		return false, errors.New(m)
 	}
 
 	return true, nil

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"designs.capital/dogepool/block"
+	"designs.capital/dogepool/bitcoin"
 )
 
 type stratumResponse struct {
@@ -138,12 +138,12 @@ func miningAuthorize(request *stratumRequest, client *stratumClient, pool *PoolS
 	// The config has the primarycoinAddress-auxcoinAddress-auxcoinAddress order we need
 	blockchainIndex := 0
 	for _, blockChainName := range pool.config.BlockChainOrder {
-		blockChain := block.GetChain(blockChainName, "", nil)
+		blockChain := bitcoin.GetChain(blockChainName)
 		inputBlockChainAddress := minerAddresses[blockchainIndex]
 
-		if (pool.coinNodes[blockChainName].Network == "test" &&
+		if (pool.activeNodes[blockChainName].Network == "test" &&
 			!blockChain.ValidTestnetAddress(inputBlockChainAddress)) ||
-			(pool.coinNodes[blockChainName].Network == "main" &&
+			(pool.activeNodes[blockChainName].Network == "main" &&
 				!blockChain.ValidMainnetAddress(inputBlockChainAddress)) {
 			return authResponse, errors.New("Not a valid miner address")
 		}
@@ -196,7 +196,7 @@ func miningSubmit(request *stratumRequest, client *stratumClient, pool *PoolServ
 		Id:     request.Id,
 	}
 
-	var work Work
+	var work bitcoin.Work
 	err := json.Unmarshal(request.Params, &work)
 	if err != nil {
 		return response, err

@@ -18,6 +18,16 @@ type coinNodeConfig struct {
 
 type blockChainNodesConfigMap map[string][]coinNodeConfig // coin name => [] of blockNodes
 
+type BlockChainOrder []string
+
+func (b BlockChainOrder) GetPrimary() string {
+	return b[0]
+}
+
+func (b BlockChainOrder) GetAux1() string {
+	return b[1]
+}
+
 type Config struct {
 	PoolName          string                   `json:"pool_name"`
 	BlockSignature    string                   `json:"block_signature"`
@@ -26,7 +36,7 @@ type Config struct {
 	MaxConnections    int                      `json:"max_connections"`
 	ConnectionTimeout string                   `json:"connection_timeout"`
 	PoolDifficulty    float32                  `json:"pool_difficulty"`
-	BlockChainOrder   []string                 `json:"merged_blockchain_order"`
+	BlockChainOrder   `json:"merged_blockchain_order"`
 }
 
 func LoadConfig(fileName string) *Config {

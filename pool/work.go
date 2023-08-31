@@ -5,31 +5,23 @@ import (
 	"fmt"
 	"log"
 
-	"designs.capital/dogepool/block"
-	"designs.capital/dogepool/template"
+	"designs.capital/dogepool/bitcoin"
 )
 
-type Work []interface{}
-
-func (p *PoolServer) generateMergedWorkFromTemplates(coinTemplates template.MergedCoinPairs, signature string) (Work, error) {
+func (p *PoolServer) generateMergedWorkFromTemplates(coinTemplates Pair, signature string) (bitcoin.Work, error) {
 
 	if len(signature) > 96 {
 		return nil, errors.New("Signature length is too long")
 	}
 
-	primaryCoinTemplate := coinTemplates.GetPrimary()
-	primaryCoinConfig, configFound := p.config.BlockchainNodes[primaryCoinTemplate.BlockchainName]
-	if !configFound {
-		return nil, errors.New("Config not found: " + primaryCoinTemplate.BlockchainName)
-	}
-
-	primaryNode := p.coinNodes[primaryCoinTemplate.BlockchainName]
-
-	// TODO - need to go to active rpc config for fallback, not config[0] every time
-	primaryChain := block.GetChain(primaryCoinTemplate.BlockchainName, primaryCoinConfig[0].RewardAddress, primaryNode.RPC)
+	primaryCoinName := p.config.BlockChainOrder.GetPrimary()
+	primaryCoin := coinTemplates.GetPrimary()
 
 	// TODO - w/ merged mining, it's possible to reuse the previously built work packet for any auxillary/primary coins
-	work, err := primaryChain.GenerateWork(&coinTemplates[0], signature)
+	extranonceByteLength := 8
+	block, work, err := bitcoin.GenerateWork(primaryCoin.Template, primaryCoinName, signature, p.activeNodes[primaryCoinName].RewardPubScriptKey, extranonceByteLength)
+
+	p.templates[0] = *block
 
 	if err != nil {
 		return work, err
@@ -39,19 +31,25 @@ func (p *PoolServer) generateMergedWorkFromTemplates(coinTemplates template.Merg
 }
 
 // Main OUTPUT
-func (p *PoolServer) recieveWorkFromClient(share Work, client *stratumClient) error {
-	templates, err := p.templatesHistory.GetLatest()
+func (p *PoolServer) recieveWorkFromClient(share bitcoin.Work, client *stratumClient) error {
+	templates := p.templates
+
+	primaryBlockTemplate := templates.GetPrimary()
+	primaryBlockHeight := primaryBlockTemplate.Template.Height
+
+	nonce := share[primaryBlockTemplate.NonceSubmissionSlot()].(string)
+
+	slot, _ := primaryBlockTemplate.Extranonce2SubmissionSlot()
+	extranonce2 := share[slot].(string)
+
+	extranonce := client.extranonce1 + extranonce2
+
+	_, err := primaryBlockTemplate.Header(extranonce, nonce)
 	if err != nil {
 		return err
 	}
 
-	primaryBlockTemplate := templates.GetPrimary()                                    // Maybe we check both?
-	primaryBlockTemplate.RequestedWork[block.Extranonce1CacheID] = client.extranonce1 // This isn't very invertable.  It's Bitcoin block specific
-	primaryChainName := primaryBlockTemplate.BlockchainName
-	primaryChain := block.GetChain(primaryChainName, "", nil)
-	primaryBlockHeight := primaryBlockTemplate.RpcBlockTemplate.Height
-
-	status := verifyShare(primaryChain, primaryBlockTemplate, share, p.config.PoolDifficulty)
+	status := verifyShare(primaryBlockTemplate, share, p.config.PoolDifficulty)
 
 	if status == shareValid || status == blockCandidate {
 		m := "Valid share for block %v from %v"
@@ -68,7 +66,7 @@ func (p *PoolServer) recieveWorkFromClient(share Work, client *stratumClient) er
 		return nil
 	case blockCandidate:
 		// write share to persistence - block candidate
-		err = p.submitBlockToChain(primaryBlockTemplate, share, primaryChainName)
+		err := p.submitBlockToChain(primaryBlockTemplate, share, primaryBlockTemplate.ChainName())
 		if err != nil {
 			m := "Block submission error of block %v from %v, %v"
 			m = fmt.Sprintf(m, primaryBlockHeight, client.ip, err.Error())
@@ -82,19 +80,8 @@ func (p *PoolServer) recieveWorkFromClient(share Work, client *stratumClient) er
 	}
 }
 
-func (pool *PoolServer) generateWorkFromCache(refresh bool) (Work, error) {
-	var work Work
-	templates, err := pool.templatesHistory.GetLatest()
-	if err != nil {
-		return work, err
-	}
-	work, err = pool.generateMergedWorkFromTemplates(templates, pool.config.BlockSignature)
-
-	if err != nil {
-		return work, err
-	}
-
-	work = append(work, interface{}(refresh))
+func (pool *PoolServer) generateWorkFromCache(refresh bool) (bitcoin.Work, error) {
+	work := append(pool.workCache, interface{}(refresh))
 
 	return work, nil
 }

@@ -6,24 +6,24 @@ import (
 	"errors"
 	"log"
 
-	"designs.capital/dogepool/block"
+	"designs.capital/dogepool/bitcoin"
 	"designs.capital/dogepool/rpc"
-	"designs.capital/dogepool/template"
 	"github.com/go-zeromq/zmq4"
 )
 
 type blockChainNodesMap map[string]blockChainNode // "blockChainName" => activeNode
 
 type blockChainNode struct {
-	NotifyURL string
-	RPC       *rpc.RPCClient
-	Network   string
+	NotifyURL          string
+	RPC                *rpc.RPCClient
+	Network            string
+	RewardPubScriptKey string // TODO - this is very bitcoin specific.  Abstract to interface.
 }
 
 type hashblockCounterMap map[string]uint32 // "blockChainName" => hashblock msg counter
 
 func (pool *PoolServer) loadBlockchainNodes() {
-	pool.coinNodes = make(blockChainNodesMap)
+	pool.activeNodes = make(blockChainNodesMap)
 	for blockChainName, nodes := range pool.config.BlockchainNodes {
 		node := nodes[0] // Always try to return to the primary node
 
@@ -34,12 +34,17 @@ func (pool *PoolServer) loadBlockchainNodes() {
 		chainInfo, err := rpcClient.GetBlockChainInfo()
 		panicOnError(err)
 
+		address, err := rpcClient.ValidateAddress(node.RewardAddress)
+		panicOnError(err)
+		rewardPubScriptKey := address.ScriptPubKey
+
 		newNode := blockChainNode{
-			NotifyURL: node.NotifyURL,
-			RPC:       rpcClient,
-			Network:   chainInfo.Chain,
+			NotifyURL:          node.NotifyURL,
+			RPC:                rpcClient,
+			Network:            chainInfo.Chain,
+			RewardPubScriptKey: rewardPubScriptKey,
 		}
-		pool.coinNodes[blockChainName] = newNode
+		pool.activeNodes[blockChainName] = newNode
 	}
 }
 
@@ -47,7 +52,7 @@ func (pool *PoolServer) listenForBlockNotifications() error {
 	notifyChannel := make(chan hashBlockResponse)
 	hashblockCounterMap := make(hashblockCounterMap)
 
-	for blockChainName := range pool.coinNodes {
+	for blockChainName := range pool.activeNodes {
 		subscription, err := pool.createZMQSubscriptionToHashBlock(blockChainName, notifyChannel)
 		defer subscription.Close()
 		if err != nil {
@@ -72,7 +77,7 @@ func (pool *PoolServer) listenForBlockNotifications() error {
 
 		hashblockCounterMap[chainName] = newCount
 
-		pool.fetchAndCacheRpcBlockTemplates()
+		pool.fetchRpcBlockTemplatesAndCacheWork()
 		work, err := pool.generateWorkFromCache(true)
 		logOnError(err)
 		pool.broadcastWork(work)
@@ -80,23 +85,16 @@ func (pool *PoolServer) listenForBlockNotifications() error {
 }
 
 // Ultimate program OUTPUT
-func (p *PoolServer) submitBlockToChain(blockTemplate template.Block, work Work, chainName string) error {
-	node, found := p.coinNodes[chainName]
-	if !found {
-		return errors.New("Chain node not found: " + chainName)
-	}
-	nodeConfig, found := p.config.BlockchainNodes[chainName]
-	if !found {
-		return errors.New("Chain config not found: " + chainName)
-	}
-
-	coin := block.GetChain(chainName, nodeConfig[0].RewardAddress, node.RPC)
-	submission, err := coin.PrepareWorkForSubmission(blockTemplate, work)
+func (p *PoolServer) submitBlockToChain(block bitcoin.BitcoinBlock, work bitcoin.Work, chainName string) error {
+	submission, err := block.Submit()
 	if err != nil {
 		return err
 	}
 
-	success, err := p.coinNodes[chainName].RPC.SubmitBlock(submission)
+	submit := []any{
+		any(submission),
+	}
+	success, err := p.activeNodes[chainName].RPC.SubmitBlock(submit)
 
 	if !success || err != nil {
 		return errors.New("Node Rejection: " + err.Error())
@@ -114,7 +112,7 @@ type hashBlockResponse struct {
 func (p *PoolServer) createZMQSubscriptionToHashBlock(blockChainName string, hashBlockChannel chan hashBlockResponse) (zmq4.Socket, error) {
 	sub := zmq4.NewSub(context.Background())
 
-	url := p.coinNodes[blockChainName].NotifyURL
+	url := p.activeNodes[blockChainName].NotifyURL
 	err := sub.Dial(url)
 	if err != nil {
 		return sub, err

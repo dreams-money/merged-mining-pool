@@ -1,9 +1,14 @@
-package blockchain
+package bitcoin
 
-type Blockchain interface {
+type Block interface {
 	ChainName() string
-	BlockDigest(header []byte) ([]byte, error)
+
+	NonceSubmissionSlot() int
+	Extranonce2SubmissionSlot() (int, bool)
 	ShareMultiplier() float32
+
 	ValidMainnetAddress(address string) bool
 	ValidTestnetAddress(address string) bool
+
+	init(Blockchain)
 }

@@ -1,8 +1,7 @@
 package pool
 
 import (
-	"designs.capital/dogepool/block"
-	"designs.capital/dogepool/template"
+	"designs.capital/dogepool/bitcoin"
 )
 
 const (
@@ -11,15 +10,16 @@ const (
 	shareInvalid
 )
 
-func verifyShare(chain block.BlockchainProcessor, blockTemplate template.Block, share []interface{}, poolDifficulty float32) int {
-	blockSum, err := chain.CalculateSum(&blockTemplate, share)
+func verifyShare(block bitcoin.BitcoinBlock, share bitcoin.Work, poolDifficulty float32) int {
+
+	blockSum, err := block.Sum()
 	logOnError(err)
 
 	// TODO - make share multiplier invertable
-	poolTarget, _ := block.TargetFromDifficulty(poolDifficulty / float32(chain.ShareMultiplier()))
+	poolTarget, _ := bitcoin.TargetFromDifficulty(poolDifficulty / float32(block.ShareMultiplier()))
 	poolTargetBig, _ := poolTarget.ToBig()
 
-	chainTarget := block.Target(blockTemplate.RpcBlockTemplate.Target)
+	chainTarget := bitcoin.Target(block.Template.Target)
 	chainTargetBig, _ := chainTarget.ToBig()
 
 	if blockSum.Cmp(chainTargetBig) <= 0 {

@@ -2,6 +2,8 @@ package pool
 
 import (
 	"encoding/json"
+
+	"designs.capital/dogepool/bitcoin"
 )
 
 // type stratumRequest struct {
@@ -15,7 +17,7 @@ type stratumRequest struct {
 	Params json.RawMessage `json:"params"`
 }
 
-func miningNotify(work Work) stratumRequest {
+func miningNotify(work bitcoin.Work) stratumRequest {
 	var request stratumRequest
 
 	params, err := json.Marshal(work)

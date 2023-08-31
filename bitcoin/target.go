@@ -1,4 +1,4 @@
-package block
+package bitcoin
 
 import (
 	"errors"
@@ -8,8 +8,6 @@ import (
 )
 
 type Target string
-
-/* S/O - https://developer.bitcoin.org/reference/block_chain.html#target-nbits */
 
 const highestTarget = "00000000ffff0000000000000000000000000000000000000000000000000000"
 

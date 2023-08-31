@@ -1,33 +1,47 @@
-package block
+package bitcoin
 
 import (
 	"crypto/sha256"
 	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"log"
-	"math/rand"
-	"time"
-	"unsafe"
 )
 
-func doubleSha256(input []byte) [32]byte {
+func doubleSha256Bytes(input []byte) [32]byte {
 	sum := sha256.Sum256(input)
 	sum = sha256.Sum256(sum[:])
 	return sum
 }
 
-func reverseHex4Bytes(s string) (string, error) {
-	if len(s)%8 != 0 {
-		return "", errors.New("String must be divisible by 8 to represent 4 byte array")
+func varUint(value uint) string {
+	var buffer []byte
+	if value <= 252 {
+		buffer = []byte{byte(value)}
+	} else if value > 0xfd && value <= 0xffff {
+		buffer = make([]byte, 2)
+		binary.LittleEndian.PutUint16(buffer, uint16(value))
+		buffer = append([]byte{0xfd}, buffer...)
+	} else if value > 0xffff && value <= 0xffffffff {
+		buffer = make([]byte, 4)
+		binary.LittleEndian.PutUint32(buffer, uint32(value))
+		buffer = append([]byte{0xfe}, buffer...)
+	} else if value > 0xffffffff && value <= 0xffffffffffffffff {
+		buffer = make([]byte, 8)
+		binary.LittleEndian.PutUint64(buffer, uint64(value))
+		buffer = append([]byte{0xff}, buffer...)
+	} else {
+		panic("Too large to stream")
 	}
 
-	var o string
+	return hex.EncodeToString(buffer)
+}
 
-	for l, i := len(s), 0; i < l/8; i++ {
-		o = o + s[l-8*(i+1):(l-(8*i))]
-	}
-
-	return o, nil
+func varUint64(value uint64) string {
+	eightByteBuffer := make([]byte, 8)
+	binary.LittleEndian.PutUint64(eightByteBuffer, value)
+	cleaned := removeInsignificantBytes(eightByteBuffer)
+	return hex.EncodeToString(cleaned)
 }
 
 func fourLittleEndianBytes(value interface{}) []byte {
@@ -84,26 +98,6 @@ func eightLittleEndianBytes(value interface{}) []byte {
 	return eightByteBuffer
 }
 
-func varUint(value uint) ([]byte, error) {
-	if value <= 252 {
-		return []byte{byte(value)}, nil
-	} else if value > 0xfd && value <= 0xffff {
-		buffer := make([]byte, 2)
-		binary.LittleEndian.PutUint16(buffer, uint16(value))
-		return append([]byte{0xfd}, buffer...), nil
-	} else if value > 0xffff && value <= 0xffffffff {
-		buffer := make([]byte, 4)
-		binary.LittleEndian.PutUint32(buffer, uint32(value))
-		return append([]byte{0xfe}, buffer...), nil
-	} else if value > 0xffffffff && value <= 0xffffffffffffffff {
-		buffer := make([]byte, 8)
-		binary.LittleEndian.PutUint64(buffer, uint64(value))
-		return append([]byte{0xff}, buffer...), nil
-	} else {
-		return nil, errors.New("Too large to stream")
-	}
-}
-
 func removeInsignificantBytes(bytes []byte) []byte {
 	var cleaned []byte
 	for _, b := range bytes {
@@ -114,14 +108,14 @@ func removeInsignificantBytes(bytes []byte) []byte {
 	return cleaned
 }
 
-func significantBytesWithLengthHeader(bytes []byte) []byte {
-	cleaned := removeInsignificantBytes(bytes)
-	return bytesWithLengthHeader(cleaned)
-}
-
 func bytesWithLengthHeader(bytes []byte) []byte {
 	lenHeader := []byte{byte(len(bytes))}
 	return append(lenHeader, bytes...)
+}
+
+func significantBytesWithLengthHeader(bytes []byte) []byte {
+	cleaned := removeInsignificantBytes(bytes)
+	return bytesWithLengthHeader(cleaned)
 }
 
 func reverse(b []byte) []byte {
@@ -134,28 +128,28 @@ func reverse(b []byte) []byte {
 	return r
 }
 
-func randString(n int) string {
-	var src = rand.NewSource(time.Now().UnixNano())
-	const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-	const (
-		letterIdxBits = 6                    // 6 bits to represent a letter index
-		letterIdxMask = 1<<letterIdxBits - 1 // All 1-bits, as many as letterIdxBits
-		letterIdxMax  = 63 / letterIdxBits   // # of letter indices fitting in 63 bits
-	)
+func reverseHexBytes(hex string) (string, error) {
+	if len(hex)%2 != 0 {
+		return "", errors.New("String must be divisible by 2 to be a byte string")
+	}
+	o := ""
+	l := len(hex)
+	for i := l; i > 0; i = i - 2 {
+		o = o + hex[i-2:i]
+	}
+	return o, nil
+}
 
-	b := make([]byte, n)
-	// A src.Int63() generates 63 random bits, enough for letterIdxMax characters!
-	for i, cache, remain := n-1, src.Int63(), letterIdxMax; i >= 0; {
-		if remain == 0 {
-			cache, remain = src.Int63(), letterIdxMax
-		}
-		if idx := int(cache & letterIdxMask); idx < len(letterBytes) {
-			b[i] = letterBytes[idx]
-			i--
-		}
-		cache >>= letterIdxBits
-		remain--
+func reverseHex4Bytes(hex string) (string, error) {
+	if len(hex)%8 != 0 {
+		return "", errors.New("String must be divisible by 8 to represent 4 byte array")
 	}
 
-	return *(*string)(unsafe.Pointer(&b))
+	var o string
+
+	for l, i := len(hex), 0; i < l/8; i++ {
+		o = o + hex[l-8*(i+1):(l-(8*i))]
+	}
+
+	return o, nil
 }

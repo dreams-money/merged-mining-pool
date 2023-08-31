@@ -1,9 +1,7 @@
-package blockchain
+package bitcoin
 
 import (
 	"regexp"
-
-	"golang.org/x/crypto/scrypt"
 )
 
 type Litecoin struct{}
@@ -12,8 +10,12 @@ func (Litecoin) ChainName() string {
 	return "dogecoin"
 }
 
-func (Litecoin) BlockDigest(header []byte) ([]byte, error) {
-	return scrypt.Key(header, header, 1024, 1, 1, 32)
+func (Litecoin) CoinbaseDigest(coinbase string) (string, error) {
+	return DoubleSha256(coinbase)
+}
+
+func (Litecoin) HeaderDigest(header string) (string, error) {
+	return ScryptDigest(header)
 }
 
 func (Litecoin) ShareMultiplier() float32 {

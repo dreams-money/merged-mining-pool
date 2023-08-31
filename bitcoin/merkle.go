@@ -1,36 +1,24 @@
-package block
+package bitcoin
 
 import (
 	"encoding/hex"
 )
 
-/*******************************************
-*******  Merkle Illustration ***************
-********************************************
+func (t *Template) MerkleSteps() ([]string, error) {
+	transactionIDs := make([]string, len(t.Transactions))
+	for i, transaction := range t.Transactions {
+		transactionIDs[i] = transaction.ID
+	}
 
-S/O - https://developer.bitcoin.org/reference/block_chain.html#merkle-trees
-
-a   b c   d	e	f <- level1
- \ /   \ /   \ /
-  G     H     I   G  <- double up if odd
-   \   /       \ /
-     J          K <- level3,
-	             ... level4,
-			     ... levelN
-      \___   __/
-	      \ /
-           L
-
-	Steps is G, J, L
-
-********************************************/
+	return templateMerkleBranchSteps(transactionIDs)
+}
 
 func getMerkleRoot(transactionIDs, steps []string) (string, error) {
 	l := len(transactionIDs)
 
 	if l == 0 {
 		var empty []byte
-		slice := doubleSha256(empty)
+		slice := doubleSha256Bytes(empty)
 		return hex.EncodeToString(slice[:]), nil
 	} else if l%2 == 1 {
 		transactionIDs = append(transactionIDs, transactionIDs[l-1]) // Last or first?
@@ -81,13 +69,13 @@ func mergeHex(one, two string) (string, error) {
 		return "", err
 	}
 
-	merged := doubleSha256(append(oneBytes, twoBytes...))
+	merged := doubleSha256Bytes(append(oneBytes, twoBytes...))
 
 	mergedHex := hex.EncodeToString(merged[:])
 	return mergedHex, nil
 }
 
-func makeRequestMerkleBranchSteps(transactionIDs []string) ([]string, error) {
+func templateMerkleBranchSteps(transactionIDs []string) ([]string, error) {
 	steps := []string{}
 	l := len(transactionIDs)
 
@@ -103,16 +91,19 @@ func makeRequestMerkleBranchSteps(transactionIDs []string) ([]string, error) {
 	return steps, nil
 }
 
-func makeHeaderMerkleRoot(coinbase []byte, merkleBranchSteps []string) ([]byte, error) {
-	block := coinbase
+func makeHeaderMerkleRoot(coinbase string, merkleBranchSteps []string) (string, error) {
+	block, err := hex.DecodeString(coinbase)
+	if err != nil {
+		return "", err
+	}
 	for _, branch := range merkleBranchSteps {
 		branchBytes, err := hex.DecodeString(branch)
 		if err != nil {
-			return nil, err
+			return "", err
 		}
-		joined := doubleSha256(append(block, branchBytes...))
+		joined := doubleSha256Bytes(append(block, branchBytes...))
 		block = joined[:]
 	}
 
-	return block, nil
+	return hex.EncodeToString(block), nil
 }

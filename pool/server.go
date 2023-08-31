@@ -5,17 +5,18 @@ import (
 	"log"
 	"time"
 
+	"designs.capital/dogepool/bitcoin"
 	"designs.capital/dogepool/config"
-	"designs.capital/dogepool/template"
 )
 
 const maxHistory = 3
 
 type PoolServer struct {
 	config            *config.Config
-	coinNodes         blockChainNodesMap
+	activeNodes       blockChainNodesMap
 	connectionTimeout time.Duration
-	templatesHistory  template.TemplatesHistory
+	templates         Pair
+	workCache         bitcoin.Work
 }
 
 func NewServer(cfg *config.Config) *PoolServer {
@@ -31,8 +32,6 @@ func NewServer(cfg *config.Config) *PoolServer {
 
 	pool := &PoolServer{config: cfg}
 
-	pool.templatesHistory = template.NewTemplatesHistory(maxHistory)
-
 	return pool
 }
 
@@ -41,8 +40,10 @@ func (pool *PoolServer) Start() {
 	pool.loadBlockchainNodes()
 	go pool.listenForConnections()
 
+	pool.templates = make(Pair, len(pool.config.BlockChainOrder))
+
 	// Initial work creation
-	pool.fetchAndCacheRpcBlockTemplates()
+	pool.fetchRpcBlockTemplatesAndCacheWork()
 	work, err := pool.generateWorkFromCache(false)
 	panicOnError(err)
 	pool.broadcastWork(work)
@@ -51,38 +52,46 @@ func (pool *PoolServer) Start() {
 	panicOnError(pool.listenForBlockNotifications())
 }
 
-func (pool *PoolServer) broadcastWork(work Work) {
+func (pool *PoolServer) broadcastWork(work bitcoin.Work) {
 	request := miningNotify(work)
 	err := notifyAllSessions(request)
 	logOnError(err)
 }
 
-func (p *PoolServer) fetchAllBlockTemplatesFromRPC() (template.MergedCoinPairs, error) { // This
-	var templates template.MergedCoinPairs
+func (p *PoolServer) fetchAllBlockTemplatesFromRPC() ([]bitcoin.Template, error) {
+	var templates []bitcoin.Template
 
 	for _, blockchainName := range p.config.BlockChainOrder {
-		node := p.coinNodes[blockchainName]
+		node := p.activeNodes[blockchainName]
 		rpcBlockTemplate, err := node.RPC.GetBlockTemplate()
 		if err != nil {
 			return templates, errors.New("RPC error: " + err.Error())
 		}
-		coinTemplate := template.Block{
-			BlockchainName:   blockchainName,
-			RpcBlockTemplate: rpcBlockTemplate,
-		}
-		templates = append(templates, coinTemplate)
+
+		templates = append(templates, rpcBlockTemplate)
 	}
 
 	return templates, nil
 }
 
-func (p *PoolServer) fetchAndCacheRpcBlockTemplates() {
+func (p *PoolServer) fetchRpcBlockTemplatesAndCacheWork() {
+	var block *bitcoin.BitcoinBlock
+	var err error
 	templates, err := p.fetchAllBlockTemplatesFromRPC()
+
+	primaryTemplate := templates[0]
+	primaryName := p.config.BlockChainOrder.GetPrimary()
+	sig := p.config.BlockSignature
+	rewardPubScriptKey := p.activeNodes[primaryName].RewardPubScriptKey
+	extranonceByteReservationLength := 8
+
+	block, p.workCache, err = bitcoin.GenerateWork(&primaryTemplate,
+		primaryName, sig, rewardPubScriptKey, extranonceByteReservationLength)
 	if err != nil {
-		// TODO rpc.MarkSick()
-		log.Println(err)
+		log.Print(err)
 	}
-	p.templatesHistory.AddMergedCoinTemplatePairs(templates)
+
+	p.templates[0] = *block
 }
 
 func notifyAllSessions(request stratumRequest) error {
