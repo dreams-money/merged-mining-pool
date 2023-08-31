@@ -7,7 +7,7 @@ import (
 type Litecoin struct{}
 
 func (Litecoin) ChainName() string {
-	return "dogecoin"
+	return "litecoin"
 }
 
 func (Litecoin) CoinbaseDigest(coinbase string) (string, error) {
