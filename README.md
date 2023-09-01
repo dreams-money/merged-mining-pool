@@ -7,7 +7,6 @@ A merged mining pool centered around Doge/Litecoin
 
 Features
 --------
-  - Merged mining
   - Single coin mining
   - Stratum
   - Subscribes to block notifications from blockchain daemon
@@ -15,6 +14,7 @@ Features
 
 Todo
 ----
+  - Merged mining (nearly done)
   - RPC Failover
   - Payouts module
 
@@ -30,3 +30,11 @@ You have to start your nodes with block notification on:
 
     // remote nodes need additional configuration if they're on WAN or LAN (firewalls, port forwarding, etc.)
     -zmqpubhashblock="tcp://0.0.0.0:<your-port-here>"
+
+Connecting to the pool
+----------------------
+
+Once you have it running, your client can connect with the following login:
+
+  - username: youPrimaryCoinMinerAddress-yourAux1CoinMinerAddress.rigID
+  - password: none

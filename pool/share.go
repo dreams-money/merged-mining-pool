@@ -5,28 +5,64 @@ import (
 )
 
 const (
-	shareValid = iota
-	blockCandidate
-	shareInvalid
+	shareInvalid = iota
+	shareValid
+	primaryCandidate
+	aux1Candidate
+	dualCandidate
 )
 
-func verifyShare(block bitcoin.BitcoinBlock, share bitcoin.Work, poolDifficulty float32) int {
+var statusMap = map[int]string{
+	2: "Primary",
+	3: "Aux1",
+	4: "Dual",
+}
 
-	blockSum, err := block.Sum()
+func verifyShare(primary, aux1 bitcoin.BitcoinBlock, share bitcoin.Work, poolDifficulty float32) int {
+
+	primarySum, err := primary.Sum()
 	logOnError(err)
 
-	// TODO - make share multiplier invertable
-	poolTarget, _ := bitcoin.TargetFromDifficulty(poolDifficulty / float32(block.ShareMultiplier()))
-	poolTargetBig, _ := poolTarget.ToBig()
+	primaryTarget := bitcoin.Target(primary.Template.Target)
+	primaryTargetBig, _ := primaryTarget.ToBig()
 
-	chainTarget := bitcoin.Target(block.Template.Target)
-	chainTargetBig, _ := chainTarget.ToBig()
+	// fmt.Println("     Primary Sum", primarySum.Text(16))
+	// fmt.Println("  Primary Target", primaryTarget)
 
-	if blockSum.Cmp(chainTargetBig) <= 0 {
-		return blockCandidate
+	auxStatus := int(0)
+	if aux1.Template != nil {
+		aux1Sum, err := aux1.Sum()
+		logOnError(err)
+
+		aux1Target := bitcoin.Target(aux1.Template.Target)
+		aux1TargetBig, _ := aux1Target.ToBig()
+
+		// fmt.Println("         Aux sum", aux1Sum.Text(16))
+		// fmt.Println("      Aux Target", aux1Target)
+
+		if aux1Sum.Cmp(aux1TargetBig) <= 0 {
+			auxStatus = aux1Candidate
+		}
 	}
 
-	if blockSum.Cmp(poolTargetBig) <= 0 {
+	if primarySum.Cmp(primaryTargetBig) <= 0 {
+		if auxStatus == aux1Candidate {
+			return dualCandidate
+		}
+		return primaryCandidate
+	}
+
+	if auxStatus == aux1Candidate {
+		return aux1Candidate
+	}
+
+	// Not sure if auxCoin.ShareMultiplier() every varies..
+	poolTarget, _ := bitcoin.TargetFromDifficulty(poolDifficulty / float32(primary.ShareMultiplier()))
+	poolTargettBig, _ := poolTarget.ToBig()
+
+	// fmt.Println("      Pool Target", poolTarget)
+
+	if primarySum.Cmp(poolTargettBig) <= 0 {
 		return shareValid
 	}
 

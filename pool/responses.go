@@ -141,11 +141,12 @@ func miningAuthorize(request *stratumRequest, client *stratumClient, pool *PoolS
 		blockChain := bitcoin.GetChain(blockChainName)
 		inputBlockChainAddress := minerAddresses[blockchainIndex]
 
-		if (pool.activeNodes[blockChainName].Network == "test" &&
-			!blockChain.ValidTestnetAddress(inputBlockChainAddress)) ||
-			(pool.activeNodes[blockChainName].Network == "main" &&
-				!blockChain.ValidMainnetAddress(inputBlockChainAddress)) {
-			return authResponse, errors.New("Not a valid miner address")
+		network := pool.activeNodes[blockChainName].Network
+		if (network == "test" && !blockChain.ValidTestnetAddress(inputBlockChainAddress)) ||
+			(network == "main" && !blockChain.ValidMainnetAddress(inputBlockChainAddress)) {
+			m := "Invalid %v %vnet miner address from %v: %v"
+			m = fmt.Sprintf(m, blockChainName, network, client.ip, inputBlockChainAddress)
+			return authResponse, errors.New(m)
 		}
 
 		blockchainIndex++

@@ -24,8 +24,9 @@ type hashblockCounterMap map[string]uint32 // "blockChainName" => hashblock msg 
 
 func (pool *PoolServer) loadBlockchainNodes() {
 	pool.activeNodes = make(blockChainNodesMap)
-	for blockChainName, nodes := range pool.config.BlockchainNodes {
-		node := nodes[0] // Always try to return to the primary node
+	for _, blockChainName := range pool.config.BlockChainOrder {
+
+		node := pool.config.BlockchainNodes[blockChainName][0] // Always try to return to the primary node
 
 		// TODO - add node failover..
 
@@ -97,6 +98,7 @@ func (p *PoolServer) submitBlockToChain(block bitcoin.BitcoinBlock, work bitcoin
 	success, err := p.activeNodes[chainName].RPC.SubmitBlock(submit)
 
 	if !success || err != nil {
+		log.Println("Submission text: " + submission)
 		return errors.New("Node Rejection: " + err.Error())
 	}
 

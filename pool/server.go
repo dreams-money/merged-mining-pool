@@ -74,26 +74,6 @@ func (p *PoolServer) fetchAllBlockTemplatesFromRPC() ([]bitcoin.Template, error)
 	return templates, nil
 }
 
-func (p *PoolServer) fetchRpcBlockTemplatesAndCacheWork() {
-	var block *bitcoin.BitcoinBlock
-	var err error
-	templates, err := p.fetchAllBlockTemplatesFromRPC()
-
-	primaryTemplate := templates[0]
-	primaryName := p.config.BlockChainOrder.GetPrimary()
-	sig := p.config.BlockSignature
-	rewardPubScriptKey := p.activeNodes[primaryName].RewardPubScriptKey
-	extranonceByteReservationLength := 8
-
-	block, p.workCache, err = bitcoin.GenerateWork(&primaryTemplate,
-		primaryName, sig, rewardPubScriptKey, extranonceByteReservationLength)
-	if err != nil {
-		log.Print(err)
-	}
-
-	p.templates[0] = *block
-}
-
 func notifyAllSessions(request stratumRequest) error {
 	for _, client := range sessions {
 		err := sendPacket(request, client)
