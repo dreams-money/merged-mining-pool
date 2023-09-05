@@ -1,5 +1,7 @@
 package bitcoin
 
+import "fmt"
+
 type Submission struct {
 	Header            string
 	TransactionCount  string
@@ -8,6 +10,7 @@ type Submission struct {
 }
 
 // https://developer.bitcoin.org/reference/block_chain.html#serialized-blocks
+// https://en.bitcoin.it/wiki/BIP_0022#Appendix:_Example_Rejection_Reasons
 
 func (s *Submission) Serialize() string {
 	return s.Header +
@@ -25,6 +28,7 @@ func (b *BitcoinBlock) createSubmissionHex() string {
 		TransactionBuffer: b.buildTransactionBuffer(),
 	}
 
+	// submissionDebugOutput(submission.Header, submission.TransactionCount, submission.Coinbase, submission.TransactionBuffer, submission.Serialize())
 	return submission.Serialize()
 }
 
@@ -34,4 +38,17 @@ func (b *BitcoinBlock) buildTransactionBuffer() string {
 		buffer = buffer + transaction.Data
 	}
 	return buffer
+}
+
+func submissionDebugOutput(header, transactionCount, coinbase, transactionBuffer, submission string) {
+	fmt.Println()
+	fmt.Println("**😱SUBMISSION PARTS😱**")
+	fmt.Println()
+	fmt.Println("Header", header)
+	fmt.Println("TransactionCount", transactionCount)
+	fmt.Println("Coinbase", coinbase)
+	fmt.Println("TransactionBuffer", transactionBuffer)
+	fmt.Println()
+	fmt.Println("Submission", submission)
+	fmt.Println()
 }

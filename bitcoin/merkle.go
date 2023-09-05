@@ -24,24 +24,47 @@ a   b c   d	e	f <- level1
 
 	Steps is G, J, L
 
+Little endian writes..
+
 ********************************************/
 
 func (t *Template) MerkleSteps() ([]string, error) {
 	transactionIDs := make([]string, len(t.Transactions))
 	for i, transaction := range t.Transactions {
-		transactionIDs[i] = transaction.ID
+		idReversed, _ := reverseHexBytes(transaction.ID)
+		transactionIDs[i] = idReversed
 	}
 
 	return templateMerkleBranchSteps(transactionIDs)
 }
 
-func getMerkleRoot(transactionIDs, steps []string) (string, error) {
+func templateMerkleBranchSteps(transactionIDs []string) ([]string, error) {
+	steps := []string{}
 	l := len(transactionIDs)
+
+	if l == 0 {
+		return steps, nil
+	}
+
+	_, steps, err := getMerkleRoot(transactionIDs)
+	if err != nil {
+		return steps, err
+	}
+
+	return steps, nil
+}
+
+func getMerkleRoot(transactionIDs []string) (string, []string, error) {
+	l := len(transactionIDs)
+	var steps []string
 
 	if l == 0 {
 		var empty []byte
 		slice := doubleSha256Bytes(empty)
-		return hex.EncodeToString(slice[:]), nil
+		return hex.EncodeToString(slice[:]), steps, nil
+	} else if l == 1 {
+		steps = append(steps, transactionIDs[0])
+		return transactionIDs[0], steps, nil
 	} else if l%2 == 1 {
 		transactionIDs = append(transactionIDs, transactionIDs[l-1]) // Last or first?
 		l++
@@ -50,19 +73,19 @@ func getMerkleRoot(transactionIDs, steps []string) (string, error) {
 	if l == 2 {
 		mergedHex, err := mergeHex(transactionIDs[0], transactionIDs[1])
 		steps = append(steps, mergedHex)
-		return mergedHex, err
+		return mergedHex, steps, err
 	}
 
 	level := transactionIDs
 	for l > 1 {
 		level, err := scanMerkleLevel(level, steps)
 		if err != nil {
-			return "", err
+			return "", steps, err
 		}
 		l = len(level)
 	}
 
-	return level[0], nil
+	return level[0], steps, nil
 }
 
 func scanMerkleLevel(pairs, steps []string) ([]string, error) {
@@ -95,22 +118,6 @@ func mergeHex(one, two string) (string, error) {
 
 	mergedHex := hex.EncodeToString(merged[:])
 	return mergedHex, nil
-}
-
-func templateMerkleBranchSteps(transactionIDs []string) ([]string, error) {
-	steps := []string{}
-	l := len(transactionIDs)
-
-	if l == 0 {
-		return steps, nil
-	}
-
-	_, err := getMerkleRoot(transactionIDs, steps)
-	if err != nil {
-		return steps, err
-	}
-
-	return steps, nil
 }
 
 func makeHeaderMerkleRoot(coinbase string, merkleBranchSteps []string) (string, error) {

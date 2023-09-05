@@ -59,7 +59,7 @@ func GenerateWork(template *Template, chainName, arbitrary, poolPayoutPubScriptK
 
 }
 
-func (b *BitcoinBlock) Header(extranonce, nonce string) (string, error) {
+func (b *BitcoinBlock) Header(extranonce, nonce, nonceTime string) (string, error) {
 	if b.Template == nil {
 		return "", errors.New("Generate work first")
 	}
@@ -83,7 +83,7 @@ func (b *BitcoinBlock) Header(extranonce, nonce string) (string, error) {
 	}
 
 	t := b.Template
-	b.header, err = blockHeader(uint(t.Version), t.PrevBlockHash, merkleRoot, fmt.Sprintf("%x", t.CurrentTime), t.Bits, nonce)
+	b.header, err = blockHeader(uint(t.Version), t.PrevBlockHash, merkleRoot, nonceTime, t.Bits, nonce)
 	if err != nil {
 		return "", err
 	}
@@ -120,5 +120,26 @@ func (b *BitcoinBlock) Submit() (string, error) {
 		transactionPool[i] = transaction.Data
 	}
 
-	return b.createSubmissionHex(), nil
+	submission := b.createSubmissionHex()
+
+	if b.Template.MimbleWimble != "" {
+		submission = submission + "01" + b.Template.MimbleWimble
+	}
+
+	return submission, nil
+}
+
+func debugMerkleSteps(block BitcoinBlock) {
+	fmt.Println()
+	fmt.Println("Transaction IDs")
+	for i, transaction := range block.Template.Transactions {
+		fmt.Println(i+1, transaction.ID, " : ", transaction.Data)
+	}
+
+	fmt.Println()
+	fmt.Println("Steps")
+	for i, step := range block.merkleSteps {
+		fmt.Println(i+1, step)
+	}
+	fmt.Println()
 }

@@ -33,8 +33,12 @@ func (p *PoolServer) generateMergedWorkFromTemplates(coinTemplates Pair, signatu
 // Main OUTPUT
 func (p *PoolServer) recieveWorkFromClient(share bitcoin.Work, client *stratumClient) error {
 	templates := p.templates
-
 	primaryBlockTemplate := templates.GetPrimary()
+
+	if primaryBlockTemplate.Template == nil {
+		return errors.New("Primary block template not yet set")
+	}
+
 	primaryBlockHeight := primaryBlockTemplate.Template.Height
 
 	nonce := share[primaryBlockTemplate.NonceSubmissionSlot()].(string)
@@ -42,9 +46,11 @@ func (p *PoolServer) recieveWorkFromClient(share bitcoin.Work, client *stratumCl
 	slot, _ := primaryBlockTemplate.Extranonce2SubmissionSlot()
 	extranonce2 := share[slot].(string)
 
+	nonceTime := share[primaryBlockTemplate.NonceTimeSubmissionSlot()].(string)
+
 	extranonce := client.extranonce1 + extranonce2
 
-	_, err := primaryBlockTemplate.Header(extranonce, nonce)
+	_, err := primaryBlockTemplate.Header(extranonce, nonce, nonceTime)
 	if err != nil {
 		return err
 	}

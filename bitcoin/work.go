@@ -7,6 +7,10 @@ func (b BitcoinBlock) NonceSubmissionSlot() (slotID int) {
 	return 4
 }
 
+func (b BitcoinBlock) NonceTimeSubmissionSlot() (slotID int) {
+	return 3
+}
+
 func (b BitcoinBlock) Extranonce2SubmissionSlot() (slotID int, exists bool) {
 	return 2, true
 }

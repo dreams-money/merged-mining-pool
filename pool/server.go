@@ -38,13 +38,15 @@ func NewServer(cfg *config.Config) *PoolServer {
 func (pool *PoolServer) Start() {
 	initiateSessions()
 	pool.loadBlockchainNodes()
-	go pool.listenForConnections()
 
 	pool.templates = make(Pair, len(pool.config.BlockChainOrder))
 
 	// Initial work creation
 	pool.fetchRpcBlockTemplatesAndCacheWork()
 	work, err := pool.generateWorkFromCache(false)
+
+	go pool.listenForConnections()
+
 	panicOnError(err)
 	pool.broadcastWork(work)
 
