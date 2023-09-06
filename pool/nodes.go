@@ -98,7 +98,6 @@ func (p *PoolServer) submitBlockToChain(block bitcoin.BitcoinBlock, work bitcoin
 	success, err := p.activeNodes[chainName].RPC.SubmitBlock(submit)
 
 	if !success || err != nil {
-		log.Println("Submission text: " + submission)
 		return errors.New("Node Rejection: " + err.Error())
 	}
 

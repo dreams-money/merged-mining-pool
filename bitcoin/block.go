@@ -4,6 +4,8 @@ type Block interface {
 	ChainName() string
 
 	NonceSubmissionSlot() int
+	NonceTimeSubmissionSlot() int
+
 	Extranonce2SubmissionSlot() (int, bool)
 	ShareMultiplier() float32
 

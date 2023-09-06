@@ -42,6 +42,11 @@ func (p *PoolServer) recieveWorkFromClient(share bitcoin.Work, client *stratumCl
 	var err error
 
 	primaryBlockTemplate := p.templates.GetPrimary()
+
+	if primaryBlockTemplate.Template == nil {
+		return errors.New("Primary block template not yet set")
+	}
+
 	primaryBlockHeight := primaryBlockTemplate.Template.Height
 
 	nonce := share[primaryBlockTemplate.NonceSubmissionSlot()].(string)
@@ -49,9 +54,12 @@ func (p *PoolServer) recieveWorkFromClient(share bitcoin.Work, client *stratumCl
 	slot, _ := primaryBlockTemplate.Extranonce2SubmissionSlot()
 	extranonce2 := share[slot].(string)
 
+	nonceTime := share[primaryBlockTemplate.NonceTimeSubmissionSlot()].(string)
+
 	extranonce := client.extranonce1 + extranonce2
 
-	_, err = primaryBlockTemplate.Header(extranonce, nonce)
+	_, err = primaryBlockTemplate.Header(extranonce, nonce, nonceTime)
+
 	if err != nil {
 		return err
 	}
@@ -64,7 +72,7 @@ func (p *PoolServer) recieveWorkFromClient(share bitcoin.Work, client *stratumCl
 		aux1BlockHeight := aux1BlockTemplate.Template.Height
 		heightMessage = fmt.Sprintf("%v, %v", heightMessage, aux1BlockHeight)
 
-		_, err := aux1BlockTemplate.Header("", nonce)
+		_, err := aux1BlockTemplate.Header("", nonce, nonceTime)
 		if err != nil {
 			return err
 		}
@@ -107,7 +115,7 @@ func (p *PoolServer) recieveWorkFromClient(share bitcoin.Work, client *stratumCl
 
 	if status == primaryCandidate || status == dualCandidate {
 		err = p.submitBlockToChain(primaryBlockTemplate, share, primaryBlockTemplate.ChainName())
-		if err == nil {
+		if err != nil {
 			m := "Primary block submission error of block %v from %v, %v"
 			m = fmt.Sprintf(m, heightMessage, client.ip, err.Error())
 			err = errors.New(m)

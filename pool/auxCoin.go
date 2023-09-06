@@ -11,7 +11,7 @@ func (p *PoolServer) generateAuxHeader(auxTemplate bitcoin.Template, signature s
 		return nil, "", err
 	}
 
-	header, err := block.Header("", "")
+	header, err := block.Header("", "", "")
 	if err != nil {
 		return nil, "", err
 	}
