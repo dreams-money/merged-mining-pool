@@ -1,6 +1,11 @@
 package pool
 
-import "designs.capital/dogepool/bitcoin"
+import (
+	"encoding/hex"
+	"fmt"
+
+	"designs.capital/dogepool/bitcoin"
+)
 
 func (p *PoolServer) generateAuxHeader(auxTemplate bitcoin.Template, signature string) (*bitcoin.BitcoinBlock, string, error) {
 	aux1Name := p.config.BlockChainOrder.GetAux1()
@@ -11,10 +16,18 @@ func (p *PoolServer) generateAuxHeader(auxTemplate bitcoin.Template, signature s
 		return nil, "", err
 	}
 
-	header, err := block.Header("", "", "")
+	header, err := block.Header("", "", fmt.Sprintf("%x", auxTemplate.CurrentTime))
 	if err != nil {
 		return nil, "", err
 	}
 
-	return block, header, nil
+	return block, hexToStringByte(header), nil
+}
+
+func hexToStringByte(header string) string {
+	hexBytes, err := hex.DecodeString(header)
+	if err != nil {
+		panic(err)
+	}
+	return string(hexBytes)
 }

@@ -26,7 +26,7 @@ func verifyShare(primary, aux1 bitcoin.BitcoinBlock, share bitcoin.Work, poolDif
 	primaryTarget := bitcoin.Target(primary.Template.Target)
 	primaryTargetBig, _ := primaryTarget.ToBig()
 
-	// fmt.Println("     Primary Sum", primarySum.Text(16))
+	// fmt.Println("     Primary Sum", fmt.Sprintf("%064v", primarySum.Text(16)))
 	// fmt.Println("  Primary Target", primaryTarget)
 
 	auxStatus := int(0)
@@ -37,7 +37,7 @@ func verifyShare(primary, aux1 bitcoin.BitcoinBlock, share bitcoin.Work, poolDif
 		aux1Target := bitcoin.Target(aux1.Template.Target)
 		aux1TargetBig, _ := aux1Target.ToBig()
 
-		// fmt.Println("         Aux sum", aux1Sum.Text(16))
+		// fmt.Println("         Aux sum", fmt.Sprintf("%064v", aux1Sum.Text(16)))
 		// fmt.Println("      Aux Target", aux1Target)
 
 		if aux1Sum.Cmp(aux1TargetBig) <= 0 {
@@ -56,11 +56,11 @@ func verifyShare(primary, aux1 bitcoin.BitcoinBlock, share bitcoin.Work, poolDif
 		return aux1Candidate
 	}
 
-	// Not sure if auxCoin.ShareMultiplier() every varies..
+	// Not sure if auxCoin.ShareMultiplier() ever varies..
 	poolTarget, _ := bitcoin.TargetFromDifficulty(poolDifficulty / float32(primary.ShareMultiplier()))
 	poolTargettBig, _ := poolTarget.ToBig()
 
-	// fmt.Println("      Pool Target", poolTarget)
+	// fmt.Println("     Pool Target", fmt.Sprintf("%064v", poolTarget))
 
 	if primarySum.Cmp(poolTargettBig) <= 0 {
 		return shareValid
