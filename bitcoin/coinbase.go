@@ -48,6 +48,7 @@ func (i CoinbaseInital) Serialize() string {
 		i.PreviousOutputTransactionID +
 		i.PreviousOutputIndex +
 		varUint(i.BytesInArbitrary) +
+		// These next two aren't arbitrary, but they are in the arbitrary section ;)
 		varUint(i.BytesInHeight) +
 		i.HeightHex
 }

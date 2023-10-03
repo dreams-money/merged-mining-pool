@@ -15,7 +15,7 @@ type Generator interface {
 
 var jobCounter int
 
-func GenerateWork(template *Template, chainName, arbitrary, poolPayoutPubScriptKey string, reservedArbitraryByteLength int) (*BitcoinBlock, Work, error) { // On trigger
+func GenerateWork(template *Template, auxBlock *AuxBlock, chainName, arbitrary, poolPayoutPubScriptKey string, reservedArbitraryByteLength int) (*BitcoinBlock, Work, error) { // On trigger
 	if template == nil {
 		return nil, nil, errors.New("Template cannot be null")
 	}
@@ -47,10 +47,13 @@ func GenerateWork(template *Template, chainName, arbitrary, poolPayoutPubScriptK
 	work[0] = fmt.Sprintf("%08x", jobCounter) // Job ID
 	work[1] = block.reversePrevBlockHash
 	work[2] = block.coinbaseInitial
-	work[3] = block.arbitrary + block.coinbaseFinal
+	work[3] = block.coinbaseFinal
 	work[4] = block.merkleSteps
 	work[5] = fmt.Sprintf("%08x", block.Template.Version)
 	work[6] = block.Template.Bits
+	// if auxBlock != nil {
+	// 	work[6] = auxBlock.Bits
+	// }
 	work[7] = fmt.Sprintf("%x", block.Template.CurrentTime)
 
 	jobCounter++
@@ -106,8 +109,17 @@ func (b *BitcoinBlock) Sum() (*big.Int, error) {
 		return nil, err
 	}
 
+	digest, err = reverseHexBytes(digest)
+	if err != nil {
+		return nil, err
+	}
+
+	b.hash = digest
+
 	digestBytes, err := hex.DecodeString(digest)
-	digestBytes = reverse(digestBytes)
+	if err != nil {
+		return nil, err
+	}
 
 	return new(big.Int).SetBytes(digestBytes), nil
 }

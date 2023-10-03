@@ -8,7 +8,7 @@ type BitcoinBlock struct {
 	merkleSteps          []string
 	coinbase             string
 	header               string
-	arbitrary            string
+	hash                 string
 	chain                Blockchain
 }
 
