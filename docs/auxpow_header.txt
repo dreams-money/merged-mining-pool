@@ -1,0 +1,21 @@
+S/O RelaxinMinert - https://bitcointalk.org/index.php?topic=5091025.0 - for this.
+
+From auxblock_example.txt -
+
+-- auxpow starts here --
+coinbase tx:
+  ...
+  input1:
+    ...
+    script:
+      bytes in height hex : 03
+      height hex bytes    : 46c924 // this was dogeblock 2410822
+      auxillary data      : 1b4d696e656420627920416e74506f6f6c363332d4001502232a7aba // personal aux data. = Mined by AntPool632�#*z�
+      merged mining header: fabe6d6d // static header to signal merged mining
+      aux block hash      : bd53c430265a2ed3f9774c53d69a8beedafd945b7ce2cad70b6543044983d507 // What we got from getauxblock
+      merkle trie size    : 01000000 // set to 1 if count(auxChains) < 2. Needs research.
+      nonce + subchain id : 00000000 // set to 0 if count(auxChains) < 2. Needs research.
+      parent chain id     : 00002632 // litecoin's chain ID
+      more auxillary (?)  : b6000000 //  Needs research. Likely extranonce.
+
+This is required to merge mine

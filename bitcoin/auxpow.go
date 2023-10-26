@@ -2,11 +2,6 @@ package bitcoin
 
 import "fmt"
 
-// https://github.com/nformant1/Beginner-Guide/blob/main/AuxPoW_Doge.pdf
-// https://www.reddit.com/r/dogecoindev/comments/10kbcu8/worked_example_for_auxpow_blocks/
-// https://bitcointalk.org/index.php?topic=5091025.0
-// https://sec.cs.univie.ac.at/fileadmin/user_upload/i_sec/docs/teaching/thesis/azamyatin_merged_mining.pdf
-
 type AuxBlock struct {
 	Hash              string `json:"hash"`
 	ChainID           int    `json:"chainid"`

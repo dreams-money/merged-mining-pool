@@ -1,0 +1,80 @@
+S/O Patrick Lodder for this! - https://www.reddit.com/r/dogecoindev/comments/10kbcu8/worked_example_for_auxpow_blocks/
+
+For now, you can see it in the block version (in hex) for block protocol versions 2-4 (because as of right now there is byte alignment):
+
+version = {
+  chain_id: 2 bytes      // static 0x0062
+  auxpow_flag: 1 byte    // 0x01 = auxpow, 0x00 = no auxpow
+  actual_version: 1 byte // currently we're at 0x04
+}
+Note that the byte order can be super confusing here: binary form blocks are little-endian encoded, so the last item in the struct (least significant byte) is stored first: you'll see the version in a block in reverse order (example below)
+
+non-auxpow block
+If the block version is 0x00620004, it's an old-fashioned non-auxpow block, and it follows the encoding exactly as described at https://en.bitcoin.it/wiki/Protocol_documentation#block
+
+Example, sequentially parsed, block 4507400:
+
+version: 04006200
+prevhash: a157baac4518053c5d0c1a5313a53a67a818e9e3558eb9aec707d6c102860c8a
+merkleroot: 806a3bcf9bc1fd9428219f71c06bb6a2948883558a7fcc06c16c9fcb8a13bd5f
+timestamp: e4709463
+bits: e14f021a
+nonce: c0995aa9
+numtx: 03
+  ... 3 transactions ...
+auxpow block
+If the block version is 0x00620104, it's an auxpow block, and it follows the encoding exactly as described at https://en.bitcoin.it/wiki/Merged_mining_specification#Aux_proof-of-work_block
+
+Example, sequentially parsed, block 4569590:
+
+version: 04016200
+prevhash: 1f27b8ff7f1ec22ca8e0b89b40a8fed624d6dbb1e9985ef0f925fc014b6eb889
+merkleroot: 2defe25a77714bdd3716e5bf9cc1dcfc4dadadcbcdc87c2f114e1c2d0896af32
+timestamp: 373bd163
+bits: a4d8011a
+nonce: 00000000
+-- auxpow starts here --
+coinbase tx:
+  txversion: 01000000
+  numinputs: 01
+  input1:
+    prevout: 0000000000000000000000000000000000000000000000000000000000000000ffffffff
+    scriptsize: 54
+    script: 0346c9241b4d696e656420627920416e74506f6f6c363332d4001502232a7abafabe6d6dbd53c430265a2ed3f9774c53d69a8beedafd945b7ce2cad70b6543044983d507010000000000000000002632b6000000
+    sequence: ffffffff
+  numoutputs: 02
+  output1:
+    value: 96d0cd4a00000000
+    scriptsize: 19
+    script: 76a914bc14b37375146785074671bbaf5804133e5827e588ac
+  output2:
+    value: 0000000000000000
+    scriptsize: 26
+    script: 6a24aa21a9ed55e0c30fb8122dc432e9aa74131fa031d952cd062b6c7633a238f75ef292b09f
+  locktime: 00000000
+blockhash: 13518bcc21468a93cc2807edc389b8693ee70d838ee094576b00000000000000
+merklebranch:
+  numbranches: 09
+  - 24618e1d4274e6bf29c9f3ab22820cdfe6acca0cebe4089359b16badc5db688f
+  - 0549d9713d81c77ceffee2085513cdd52544af3225ad27a6b1832eb2eef3091a
+  - 0d13190e1d96ca7ad232b0aeede57d3f9a0c40e00fbf3186581c8143f9adcf6c
+  - 7fdaefd456b6a986757e1ba1d08035810e84683533da5ac9ab13a3f16bd7cb7c
+  - 51b1755aa6c754cce36cc73f10e13d58304c88df5e4be42cc8618f43dc87a555
+  - 5f7eca4a741f5fbb925d16f005da681e5ef0e4895d90ad4b20a062d699a13d4d
+  - 2828fe124644509c362d0989af3c5394cc20ca7b767c1df9ff7469c156ef301d
+  - c5026f450caa6d37b9340818adec6ade3f24e6164b4fa6afcf55386b4f72a78d
+  - 39fab2a32d6d79e844b704482629848a6f8f6afee3e81bf4e5f2d1b4739a7d7f
+  mask: 00000000
+chainmerklebranch:
+  numbranches: 00
+  mask: 00000000
+parentblockheader:
+  version: 00000020
+  prevhash: df6a367033d5cdde641d578f2e0a0950a74b9b78579ece59e372b17a9e58f285
+  merkleroot: b1f3a017ed1973ae0f58e6925c2bd51607abfde6c1ef4e07fa0065a8d74353ac
+  timestamp: 563bd163
+  bits: 3bbf001a0
+  nonce: c5ca1c801
+-- auxpow ends --
+numtx: 01
+  ... 1 transaction ...
