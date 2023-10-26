@@ -7,16 +7,18 @@ A merged mining pool centered around Doge/Litecoin
 
 Features
 --------
-  - Single coin mining
   - Stratum
   - Subscribes to block notifications from blockchain daemon
   - Unique extranonce generation
+  - Merged mining
 
 Todo
 ----
-  - Merged mining (nearly done)
-  - RPC Failover
-  - Payouts module
+  - Single coin mining
+  - RPC failover
+  - API service
+  - Payouts service
+  - Variable difficulty
 
 Getting Started
 ---------------

@@ -20,14 +20,14 @@ type CoinbaseInital struct {
 
 func (t *Template) CoinbaseInitial(arbitraryByteLength uint) CoinbaseInital {
 	heightBytes := eightLittleEndianBytes(t.Height)
-	heightBytes = removeInsignificantBytes(heightBytes)
+	heightBytes = removeInsignificantBytesLittleEndian(heightBytes)
 	heightHex := hex.EncodeToString(heightBytes)
 
 	heightByteLen := uint(len(heightBytes))
 	arbitraryByteLength = arbitraryByteLength + heightByteLen + 1 // 1 is for the heightByteLen byte
 
 	if arbitraryByteLength > 100 {
-		log.Println("!!WARNING!! - Coinbase length too long - !!WARNING!!")
+		log.Printf("!!WARNING!! - Coinbase length too long - !!WARNING!! %v\n", arbitraryByteLength)
 	}
 
 	return CoinbaseInital{

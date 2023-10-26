@@ -25,17 +25,27 @@ func verifyShare(primary *bitcoin.BitcoinBlock, aux1 *bitcoin.AuxBlock, share bi
 	primaryTarget := bitcoin.Target(primary.Template.Target)
 	primaryTargetBig, _ := primaryTarget.ToBig()
 
+	status := shareInvalid
+
 	if primarySum.Cmp(primaryTargetBig) <= 0 {
-		return dualCandidate
+		status = primaryCandidate
 	}
 
 	if aux1 != nil {
-		auxTarget := bitcoin.Target(aux1.Target)
+		auxTarget := bitcoin.Target(reverseHexBytes(aux1.Target))
 		auxTargetBig, _ := auxTarget.ToBig()
 
 		if primarySum.Cmp(auxTargetBig) <= 0 {
-			return aux1Candidate
+			if status == primaryCandidate {
+				status = dualCandidate
+			} else {
+				status = aux1Candidate
+			}
 		}
+	}
+
+	if status > shareInvalid {
+		return status
 	}
 
 	poolTarget, _ := bitcoin.TargetFromDifficulty(poolDifficulty / float32(primary.ShareMultiplier()))

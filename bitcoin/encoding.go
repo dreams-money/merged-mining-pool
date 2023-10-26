@@ -40,7 +40,7 @@ func varUint(value uint) string {
 func varUint64(value uint64) string {
 	eightByteBuffer := make([]byte, 8)
 	binary.LittleEndian.PutUint64(eightByteBuffer, value)
-	cleaned := removeInsignificantBytes(eightByteBuffer)
+	cleaned := removeInsignificantBytesLittleEndian(eightByteBuffer)
 	return hex.EncodeToString(cleaned)
 }
 
@@ -98,24 +98,27 @@ func eightLittleEndianBytes(value interface{}) []byte {
 	return eightByteBuffer
 }
 
-func removeInsignificantBytes(bytes []byte) []byte {
+func removeInsignificantBytesLittleEndian(bytes []byte) []byte {
 	var cleaned []byte
+
+	weReachedASignificantByte := false
 	for _, b := range bytes {
+		if weReachedASignificantByte && b == 0 {
+			continue
+		}
+		cleaned = append(cleaned, b)
 		if b != 0 {
-			cleaned = append(cleaned, b)
+
+			weReachedASignificantByte = true
 		}
 	}
+
 	return cleaned
 }
 
 func bytesWithLengthHeader(bytes []byte) []byte {
 	lenHeader := []byte{byte(len(bytes))}
 	return append(lenHeader, bytes...)
-}
-
-func significantBytesWithLengthHeader(bytes []byte) []byte {
-	cleaned := removeInsignificantBytes(bytes)
-	return bytesWithLengthHeader(cleaned)
 }
 
 func reverse(b []byte) []byte {

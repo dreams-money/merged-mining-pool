@@ -1,7 +1,6 @@
 package pool
 
 import (
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"log"
@@ -22,7 +21,6 @@ func (p *PoolServer) fetchRpcBlockTemplatesAndCacheWork() error {
 		mergedPOW := bitcoin.MergedMiningHeader +
 			auxblock.Hash + bitcoin.MergedMiningTrailer
 		auxillary = auxillary + hexStringToByteString(mergedPOW)
-		auxillary = hexStringToByteString(mergedPOW)
 
 		p.templates.AuxBlocks = []bitcoin.AuxBlock{*auxblock}
 	}
@@ -66,12 +64,17 @@ func (p *PoolServer) recieveWorkFromClient(share bitcoin.Work, client *stratumCl
 		return err
 	}
 
-	heightMessage := fmt.Sprintf("%v", primaryBlockHeight)
-
 	status := verifyShare(&primaryBlockTemplate, auxBlock, share, p.config.PoolDifficulty)
 
+	heightMessage := fmt.Sprintf("%v", primaryBlockHeight)
+	if status == dualCandidate {
+		heightMessage = fmt.Sprintf("%v,%v", primaryBlockHeight, auxBlock.Height)
+	} else if status == aux1Candidate {
+		heightMessage = fmt.Sprintf("%v", auxBlock.Height)
+	}
+
 	if status == shareInvalid {
-		m := "Invalid share for block %v from %v"
+		m := "❔ Invalid share for block %v from %v"
 		m = fmt.Sprintf(m, heightMessage, client.ip)
 		return errors.New(m)
 	}
@@ -90,16 +93,17 @@ func (p *PoolServer) recieveWorkFromClient(share bitcoin.Work, client *stratumCl
 	m = fmt.Sprintf(m, statusReadable, heightMessage, client.ip)
 	log.Println(m)
 
-	err = p.submitAuxBlock(primaryBlockTemplate, *auxBlock, p.config.GetAux1())
 	auxStatus := 0
-	if err != nil {
-		log.Println(err)
-		auxStatus = 2
-	} else {
-		heightMessage = fmt.Sprintf("%v,%v", primaryBlockHeight, auxBlock.Height)
+	aux1Name := p.config.GetAux1()
+	if aux1Name != "" && status > aux1Candidate {
+		err = p.submitAuxBlock(primaryBlockTemplate, *auxBlock, aux1Name)
+		if err != nil {
+			log.Println(err)
+			auxStatus = 2
+		}
 	}
 
-	if status == dualCandidate {
+	if status == dualCandidate || status == primaryCandidate {
 		err = p.submitBlockToChain(primaryBlockTemplate, share, p.config.GetPrimary())
 		if err != nil {
 			return err
@@ -116,15 +120,5 @@ func (p *PoolServer) recieveWorkFromClient(share bitcoin.Work, client *stratumCl
 func (pool *PoolServer) generateWorkFromCache(refresh bool) (bitcoin.Work, error) {
 	work := append(pool.workCache, interface{}(refresh))
 
-	// TODO - I need to get lower of two bits..
-
 	return work, nil
-}
-
-func hexStringToByteString(hexStr string) string {
-	bytes, err := hex.DecodeString(hexStr)
-	if err != nil {
-		panic(err)
-	}
-	return string(bytes)
 }
