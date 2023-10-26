@@ -51,9 +51,6 @@ func GenerateWork(template *Template, auxBlock *AuxBlock, chainName, arbitrary, 
 	work[4] = block.merkleSteps
 	work[5] = fmt.Sprintf("%08x", block.Template.Version)
 	work[6] = block.Template.Bits
-	// if auxBlock != nil {
-	// 	work[6] = auxBlock.Bits
-	// }
 	work[7] = fmt.Sprintf("%x", block.Template.CurrentTime)
 
 	jobCounter++
