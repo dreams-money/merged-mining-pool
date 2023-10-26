@@ -44,7 +44,6 @@ func blockHeader(version uint, previousBlockHash, merkleRootHex, nTime, bits, no
 	blockHeader = append(blockHeader, reverse(nonceHex)...)
 
 	// headerDebugOutput(versionBytes, prevBlockHash, merkleRoot, nonceTime, bitsHex, nonceHex, blockHeader)
-
 	return hex.EncodeToString(blockHeader), nil
 }
 

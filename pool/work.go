@@ -8,82 +8,113 @@ import (
 	"designs.capital/dogepool/bitcoin"
 )
 
-func (p *PoolServer) generateMergedWorkFromTemplates(coinTemplates Pair, signature string) (bitcoin.Work, error) {
-
-	if len(signature) > 96 {
-		return nil, errors.New("Signature length is too long")
-	}
-
-	primaryCoinName := p.config.BlockChainOrder.GetPrimary()
-	primaryCoin := coinTemplates.GetPrimary()
-
-	// TODO - w/ merged mining, it's possible to reuse the previously built work packet for any auxillary/primary coins
-	extranonceByteLength := 8
-	block, work, err := bitcoin.GenerateWork(primaryCoin.Template, primaryCoinName, signature, p.activeNodes[primaryCoinName].RewardPubScriptKey, extranonceByteLength)
-
-	p.templates[0] = *block
-
-	if err != nil {
-		return work, err
-	}
-
-	return work, nil
-}
-
-// Main OUTPUT
-func (p *PoolServer) recieveWorkFromClient(share bitcoin.Work, client *stratumClient) error {
-	templates := p.templates
-	primaryBlockTemplate := templates.GetPrimary()
-
-	if primaryBlockTemplate.Template == nil {
-		return errors.New("Primary block template not yet set")
-	}
-
-	primaryBlockHeight := primaryBlockTemplate.Template.Height
-
-	nonce := share[primaryBlockTemplate.NonceSubmissionSlot()].(string)
-
-	slot, _ := primaryBlockTemplate.Extranonce2SubmissionSlot()
-	extranonce2 := share[slot].(string)
-
-	nonceTime := share[primaryBlockTemplate.NonceTimeSubmissionSlot()].(string)
-
-	extranonce := client.extranonce1 + extranonce2
-
-	_, err := primaryBlockTemplate.Header(extranonce, nonce, nonceTime)
+func (p *PoolServer) fetchRpcBlockTemplatesAndCacheWork() error {
+	var block *bitcoin.BitcoinBlock
+	var err error
+	template, auxblock, err := p.fetchAllBlockTemplatesFromRPC()
 	if err != nil {
 		return err
 	}
 
-	status := verifyShare(primaryBlockTemplate, share, p.config.PoolDifficulty)
+	auxillary := p.config.BlockSignature
+	if auxblock != nil {
+		mergedPOW := bitcoin.MergedMiningHeader +
+			auxblock.Hash + bitcoin.MergedMiningTrailer
+		auxillary = auxillary + hexStringToByteString(mergedPOW)
 
-	if status == shareValid || status == blockCandidate {
-		m := "Valid share for block %v from %v"
-		m = fmt.Sprintf(m, primaryBlockHeight, client.ip)
-		log.Println(m)
+		p.templates.AuxBlocks = []bitcoin.AuxBlock{*auxblock}
 	}
 
-	switch status {
-	case shareInvalid:
-		m := "Invalid share for block %v from %v"
-		m = fmt.Sprintf(m, primaryBlockHeight, client.ip)
+	primaryName := p.config.GetPrimary()
+	rewardPubScriptKey := p.activeNodes[primaryName].RewardPubScriptKey
+	extranonceByteReservationLength := 8
+
+	block, p.workCache, err = bitcoin.GenerateWork(&template, auxblock,
+		primaryName, auxillary, rewardPubScriptKey,
+		extranonceByteReservationLength)
+	if err != nil {
+		log.Print(err)
+	}
+
+	p.templates.BitcoinBlock = *block
+
+	return nil
+}
+
+// Main OUTPUT
+func (p *PoolServer) recieveWorkFromClient(share bitcoin.Work, client *stratumClient) error {
+	primaryBlockTemplate := p.templates.GetPrimary()
+	if primaryBlockTemplate.Template == nil {
+		return errors.New("Primary block template not yet set")
+	}
+	auxBlock := p.templates.GetAux1()
+	var err error
+
+	primaryBlockHeight := primaryBlockTemplate.Template.Height
+	nonce := share[primaryBlockTemplate.NonceSubmissionSlot()].(string)
+	extranonce2Slot, _ := primaryBlockTemplate.Extranonce2SubmissionSlot()
+	extranonce2 := share[extranonce2Slot].(string)
+	nonceTime := share[primaryBlockTemplate.NonceTimeSubmissionSlot()].(string)
+
+	extranonce := client.extranonce1 + extranonce2
+
+	_, err = primaryBlockTemplate.Header(extranonce, nonce, nonceTime)
+
+	if err != nil {
+		return err
+	}
+
+	status := verifyShare(&primaryBlockTemplate, auxBlock, share, p.config.PoolDifficulty)
+
+	heightMessage := fmt.Sprintf("%v", primaryBlockHeight)
+	if status == dualCandidate {
+		heightMessage = fmt.Sprintf("%v,%v", primaryBlockHeight, auxBlock.Height)
+	} else if status == aux1Candidate {
+		heightMessage = fmt.Sprintf("%v", auxBlock.Height)
+	}
+
+	if status == shareInvalid {
+		m := "❔ Invalid share for block %v from %v"
+		m = fmt.Sprintf(m, heightMessage, client.ip)
 		return errors.New(m)
-	case shareValid:
-		return nil
-	case blockCandidate:
-		// write share to persistence - block candidate
-		err := p.submitBlockToChain(primaryBlockTemplate, share, primaryBlockTemplate.ChainName())
-		if err != nil {
-			m := "Block submission error of block %v from %v, %v"
-			m = fmt.Sprintf(m, primaryBlockHeight, client.ip, err.Error())
-			return errors.New(m)
-		}
-		log.Printf("💪😎👍 Successful submission of block %v from: %v", primaryBlockHeight, client.ip)
-		// write share to persistence - submission block
-		return nil
-	default:
-		return errors.New("Unkown share status")
 	}
+
+	m := "Valid share for block %v from %v"
+	m = fmt.Sprintf(m, heightMessage, client.ip)
+	log.Println(m)
+
+	if status == shareValid {
+		return nil
+	}
+
+	statusReadable := statusMap[status]
+
+	m = "%v block candidate for block %v from %v"
+	m = fmt.Sprintf(m, statusReadable, heightMessage, client.ip)
+	log.Println(m)
+
+	auxStatus := 0
+	aux1Name := p.config.GetAux1()
+	if aux1Name != "" && status > aux1Candidate {
+		err = p.submitAuxBlock(primaryBlockTemplate, *auxBlock, aux1Name)
+		if err != nil {
+			log.Println(err)
+			auxStatus = 2
+		}
+	}
+
+	if status == dualCandidate || status == primaryCandidate {
+		err = p.submitBlockToChain(primaryBlockTemplate, share, p.config.GetPrimary())
+		if err != nil {
+			return err
+		}
+	}
+
+	statusReadable = statusMap[status-auxStatus]
+
+	log.Printf("✅  Successful %v submission of block %v from: %v", statusReadable, heightMessage, client.ip)
+
+	return nil
 }
 
 func (pool *PoolServer) generateWorkFromCache(refresh bool) (bitcoin.Work, error) {

@@ -18,14 +18,16 @@ type blockChainNode struct {
 	RPC                *rpc.RPCClient
 	Network            string
 	RewardPubScriptKey string // TODO - this is very bitcoin specific.  Abstract to interface.
+	RewardAddress      string
 }
 
 type hashblockCounterMap map[string]uint32 // "blockChainName" => hashblock msg counter
 
 func (pool *PoolServer) loadBlockchainNodes() {
 	pool.activeNodes = make(blockChainNodesMap)
-	for blockChainName, nodes := range pool.config.BlockchainNodes {
-		node := nodes[0] // Always try to return to the primary node
+	for _, blockChainName := range pool.config.BlockChainOrder {
+
+		node := pool.config.BlockchainNodes[blockChainName][0] // Always try to return to the primary node
 
 		// TODO - add node failover..
 
@@ -43,6 +45,7 @@ func (pool *PoolServer) loadBlockchainNodes() {
 			RPC:                rpcClient,
 			Network:            chainInfo.Chain,
 			RewardPubScriptKey: rewardPubScriptKey,
+			RewardAddress:      node.RewardAddress,
 		}
 		pool.activeNodes[blockChainName] = newNode
 	}
@@ -77,7 +80,8 @@ func (pool *PoolServer) listenForBlockNotifications() error {
 
 		hashblockCounterMap[chainName] = newCount
 
-		pool.fetchRpcBlockTemplatesAndCacheWork()
+		err := pool.fetchRpcBlockTemplatesAndCacheWork()
+		logOnError(err)
 		work, err := pool.generateWorkFromCache(true)
 		logOnError(err)
 		pool.broadcastWork(work)
@@ -97,10 +101,19 @@ func (p *PoolServer) submitBlockToChain(block bitcoin.BitcoinBlock, work bitcoin
 	success, err := p.activeNodes[chainName].RPC.SubmitBlock(submit)
 
 	if !success || err != nil {
-		return errors.New("Node Rejection: " + err.Error())
+		return errors.New("⚠️  Node Rejection: " + err.Error())
 	}
 
 	return nil
+}
+
+func (p *PoolServer) submitAuxBlock(primaryBlock bitcoin.BitcoinBlock, aux1Block bitcoin.AuxBlock, chainName string) error {
+	auxpow := bitcoin.MakeAuxPow(primaryBlock)
+	success, err := p.activeNodes[chainName].RPC.SubmitAuxBlock(aux1Block.Hash, auxpow.Serialize())
+	if !success {
+		return errors.New("⚠️  Failed to submit aux block: " + err.Error())
+	}
+	return err
 }
 
 type hashBlockResponse struct {

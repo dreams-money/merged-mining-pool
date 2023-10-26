@@ -130,9 +130,33 @@ func (r *RPCClient) GetBlockTemplate() (bitcoin.Template, error) {
 		return blockTemplate, handleHttpError(resp, status)
 	}
 
-	json.Unmarshal(resp.Result, &blockTemplate)
+	err = json.Unmarshal(resp.Result, &blockTemplate)
+	if err != nil {
+		return blockTemplate, err
+	}
 
 	return blockTemplate, nil
+}
+
+func (r *RPCClient) CreateAuxBlock(rewardAddress string) (bitcoin.AuxBlock, error) {
+	var block bitcoin.AuxBlock
+
+	params := make([]any, 1)
+	params[0] = rewardAddress
+	resp, status, err := r.doRequest("createauxblock", params)
+	if err != nil {
+		return block, err
+	}
+	if status != 200 {
+		return block, handleHttpError(resp, status)
+	}
+
+	err = json.Unmarshal(resp.Result, &block)
+	if err != nil {
+		return block, err
+	}
+
+	return block, nil
 }
 
 type GetBlockReplyPart struct {
@@ -235,6 +259,26 @@ func (r *RPCClient) SubmitBlock(submission []interface{}) (bool, error) {
 
 	result := string(resp.Result)
 	if status != 200 || result != "null" {
+		m := "HTTP (%v) %v error-msg: %v"
+		m = fmt.Sprintf(m, status, result, resp.Error.Message)
+		return false, errors.New(m)
+	}
+
+	return true, nil
+}
+
+func (r *RPCClient) SubmitAuxBlock(auxBlockHash string, primaryAuxPow string) (bool, error) {
+	rpcParams := make([]any, 2)
+
+	rpcParams[0] = auxBlockHash
+	rpcParams[1] = primaryAuxPow
+
+	resp, status, err := r.doRequest("submitauxblock", rpcParams)
+	if err != nil {
+		return false, err
+	}
+	result := string(resp.Result)
+	if status != 200 || result != "true" {
 		m := "HTTP (%v) %v error-msg: %v"
 		m = fmt.Sprintf(m, status, result, resp.Error.Message)
 		return false, errors.New(m)

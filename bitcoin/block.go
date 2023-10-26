@@ -5,6 +5,7 @@ type Block interface {
 
 	NonceSubmissionSlot() int
 	NonceTimeSubmissionSlot() int
+
 	Extranonce2SubmissionSlot() (int, bool)
 	ShareMultiplier() float32
 

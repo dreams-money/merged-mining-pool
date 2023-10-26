@@ -25,6 +25,10 @@ func (b BlockChainOrder) GetPrimary() string {
 }
 
 func (b BlockChainOrder) GetAux1() string {
+	if len(b) < 2 {
+		return ""
+	}
+
 	return b[1]
 }
 

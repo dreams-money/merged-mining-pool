@@ -3,6 +3,7 @@ package bitcoin
 import (
 	"encoding/hex"
 	"fmt"
+	"log"
 )
 
 // https://developer.bitcoin.org/reference/transactions.html#coinbase-input-the-input-of-the-first-transaction-in-a-block
@@ -19,11 +20,15 @@ type CoinbaseInital struct {
 
 func (t *Template) CoinbaseInitial(arbitraryByteLength uint) CoinbaseInital {
 	heightBytes := eightLittleEndianBytes(t.Height)
-	heightBytes = removeInsignificantBytes(heightBytes)
+	heightBytes = removeInsignificantBytesLittleEndian(heightBytes)
 	heightHex := hex.EncodeToString(heightBytes)
 
 	heightByteLen := uint(len(heightBytes))
 	arbitraryByteLength = arbitraryByteLength + heightByteLen + 1 // 1 is for the heightByteLen byte
+
+	if arbitraryByteLength > 100 {
+		log.Printf("!!WARNING!! - Coinbase length too long - !!WARNING!! %v\n", arbitraryByteLength)
+	}
 
 	return CoinbaseInital{
 		Version:                     "01000000", // Different from template version
@@ -43,6 +48,7 @@ func (i CoinbaseInital) Serialize() string {
 		i.PreviousOutputTransactionID +
 		i.PreviousOutputIndex +
 		varUint(i.BytesInArbitrary) +
+		// These next two aren't arbitrary, but they are in the arbitrary section ;)
 		varUint(i.BytesInHeight) +
 		i.HeightHex
 }

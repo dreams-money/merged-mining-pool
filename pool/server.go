@@ -38,16 +38,17 @@ func NewServer(cfg *config.Config) *PoolServer {
 func (pool *PoolServer) Start() {
 	initiateSessions()
 	pool.loadBlockchainNodes()
-
-	pool.templates = make(Pair, len(pool.config.BlockChainOrder))
+	pool.templates.AuxBlocks = make([]bitcoin.AuxBlock, len(pool.config.BlockChainOrder)-1)
 
 	// Initial work creation
-	pool.fetchRpcBlockTemplatesAndCacheWork()
+	panicOnError(pool.fetchRpcBlockTemplatesAndCacheWork())
 	work, err := pool.generateWorkFromCache(false)
 
 	go pool.listenForConnections()
 
 	panicOnError(err)
+
+	go pool.listenForConnections()
 	pool.broadcastWork(work)
 
 	// There after..
@@ -60,40 +61,26 @@ func (pool *PoolServer) broadcastWork(work bitcoin.Work) {
 	logOnError(err)
 }
 
-func (p *PoolServer) fetchAllBlockTemplatesFromRPC() ([]bitcoin.Template, error) {
-	var templates []bitcoin.Template
-
-	for _, blockchainName := range p.config.BlockChainOrder {
-		node := p.activeNodes[blockchainName]
-		rpcBlockTemplate, err := node.RPC.GetBlockTemplate()
-		if err != nil {
-			return templates, errors.New("RPC error: " + err.Error())
-		}
-
-		templates = append(templates, rpcBlockTemplate)
-	}
-
-	return templates, nil
-}
-
-func (p *PoolServer) fetchRpcBlockTemplatesAndCacheWork() {
-	var block *bitcoin.BitcoinBlock
+func (p *PoolServer) fetchAllBlockTemplatesFromRPC() (bitcoin.Template, *bitcoin.AuxBlock, error) {
+	var template bitcoin.Template
+	var auxBlock bitcoin.AuxBlock
 	var err error
-	templates, err := p.fetchAllBlockTemplatesFromRPC()
 
-	primaryTemplate := templates[0]
-	primaryName := p.config.BlockChainOrder.GetPrimary()
-	sig := p.config.BlockSignature
-	rewardPubScriptKey := p.activeNodes[primaryName].RewardPubScriptKey
-	extranonceByteReservationLength := 8
+	primaryNode := p.activeNodes[p.config.GetPrimary()]
+	aux1Node := p.activeNodes[p.config.GetAux1()]
 
-	block, p.workCache, err = bitcoin.GenerateWork(&primaryTemplate,
-		primaryName, sig, rewardPubScriptKey, extranonceByteReservationLength)
+	template, err = primaryNode.RPC.GetBlockTemplate()
 	if err != nil {
-		log.Print(err)
+		return template, nil, errors.New("RPC error: " + err.Error())
 	}
 
-	p.templates[0] = *block
+	auxBlock, err = aux1Node.RPC.CreateAuxBlock(aux1Node.RewardAddress)
+	if err != nil {
+		log.Println("No aux block found: " + err.Error())
+		return template, nil, nil
+	}
+
+	return template, &auxBlock, nil
 }
 
 func notifyAllSessions(request stratumRequest) error {
