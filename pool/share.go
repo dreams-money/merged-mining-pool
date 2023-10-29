@@ -18,12 +18,18 @@ var statusMap = map[int]string{
 	4: "Dual",
 }
 
-func validateAndWeighShare(primary *bitcoin.BitcoinBlock, aux1 *bitcoin.AuxBlock, share bitcoin.Work, poolDifficulty float32) (int, float64) {
+func validateAndWeighShare(primary *bitcoin.BitcoinBlock, aux1 *bitcoin.AuxBlock, share bitcoin.Work, poolDifficulty float64) (int, float64) {
 	primarySum, err := primary.Sum()
 	logOnError(err)
 
 	primaryTarget := bitcoin.Target(primary.Template.Target)
 	primaryTargetBig, _ := primaryTarget.ToBig()
+
+	// TODO - We should probably abstract this to the bitcoin/chain package. I.e. chain.getDifficulty()
+	primaryHash := primarySum.Text(16)
+	primaryHashHit := bitcoin.Target(primaryHash)
+	shareDifficulty, _ := primaryHashHit.ToDifficulty()
+	shareDifficulty = shareDifficulty * primary.ShareMultiplier()
 
 	status := shareInvalid
 
@@ -45,14 +51,11 @@ func validateAndWeighShare(primary *bitcoin.BitcoinBlock, aux1 *bitcoin.AuxBlock
 	}
 
 	if status > shareInvalid {
-		return status, 0
+		return status, shareDifficulty
 	}
 
-	poolTarget, _ := bitcoin.TargetFromDifficulty(poolDifficulty / float32(primary.ShareMultiplier()))
+	poolTarget, _ := bitcoin.TargetFromDifficulty(poolDifficulty / primary.ShareMultiplier())
 	poolTargettBig, _ := poolTarget.ToBig()
-
-	// TODO - use bitcoin Diff From target
-	shareDifficulty := float64(0)
 
 	if primarySum.Cmp(poolTargettBig) <= 0 {
 		return shareValid, shareDifficulty

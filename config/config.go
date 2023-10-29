@@ -49,7 +49,7 @@ type Config struct {
 	Port               string                   `json:"port"`
 	MaxConnections     int                      `json:"max_connections"`
 	ConnectionTimeout  string                   `json:"connection_timeout"`
-	PoolDifficulty     float32                  `json:"pool_difficulty"`
+	PoolDifficulty     float64                  `json:"pool_difficulty"`
 	BlockChainOrder    `json:"merged_blockchain_order"`
 	ShareFlushInterval string    `json:"share_flush_interval"`
 	Persister          sqlConfig `json:"persistence"`

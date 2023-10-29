@@ -18,7 +18,7 @@ func (Dogecoin) HeaderDigest(header string) (string, error) {
 	return ScryptDigest(header)
 }
 
-func (Dogecoin) ShareMultiplier() float32 {
+func (Dogecoin) ShareMultiplier() float64 {
 	return 65536
 }
 

@@ -37,12 +37,12 @@ func miningSetExtranonce(extranonce string) stratumRequest {
 	return request
 }
 
-func miningSetDifficulty(difficulty float32) stratumRequest {
+func miningSetDifficulty(difficulty float64) stratumRequest {
 	var request stratumRequest
 
 	request.Method = "mining.set_difficulty"
 
-	diff := []float32{difficulty}
+	diff := []float64{difficulty}
 
 	var err error
 	request.Params, err = json.Marshal(diff)

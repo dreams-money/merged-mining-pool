@@ -22,11 +22,11 @@ CREATE TABLE blocks
 (
 	id BIGSERIAL NOT NULL PRIMARY KEY,
 	poolid TEXT NOT NULL,
+	type TEXT NULL,
 	chain TEXT NOT NULL,
 	blockheight BIGINT NOT NULL,
 	networkdifficulty DOUBLE PRECISION NOT NULL,
 	status TEXT NOT NULL,
-    type TEXT NULL,
     confirmationprogress FLOAT NOT NULL DEFAULT 0,
 	effort FLOAT NULL,
 	transactionconfirmationdata TEXT NOT NULL,
@@ -36,7 +36,7 @@ CREATE TABLE blocks
     hash TEXT NULL,
 	created TIMESTAMPTZ NOT NULL,
 
-    CONSTRAINT BLOCKS_POOL_HEIGHT UNIQUE (poolid, chain, blockheight, type) DEFERRABLE INITIALLY DEFERRED
+    CONSTRAINT BLOCKS_POOL_HEIGHT UNIQUE (poolid, chain, blockheight) DEFERRABLE INITIALLY DEFERRED
 );
 
 CREATE INDEX IDX_BLOCKS_POOL_BLOCK_STATUS on blocks(poolid, chain, blockheight, status);

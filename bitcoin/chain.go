@@ -4,7 +4,7 @@ type Blockchain interface {
 	ChainName() string
 	CoinbaseDigest(coinbase string) (string, error)
 	HeaderDigest(header string) (string, error)
-	ShareMultiplier() float32
+	ShareMultiplier() float64
 
 	ValidMainnetAddress(address string) bool
 	ValidTestnetAddress(address string) bool

@@ -17,7 +17,7 @@ func (t *Target) ToBig() (*big.Int, bool) {
 	return new(big.Int).SetString(string(*t), 16)
 }
 
-func (t *Target) ToDifficulty() (float32, big.Accuracy) {
+func (t *Target) ToDifficulty() (float64, big.Accuracy) {
 	highestTargetBig, success := new(big.Int).SetString(highestTarget, 16)
 	if !success {
 		panic("Failed to convert highest target value to big int")
@@ -31,17 +31,17 @@ func (t *Target) ToDifficulty() (float32, big.Accuracy) {
 	targetBigFloat := new(big.Float).SetInt(targetBig)
 	difficulty := new(big.Float).Quo(highestTargetBigFloat, targetBigFloat)
 
-	return difficulty.Float32()
+	return difficulty.Float64()
 }
 
-func TargetFromDifficulty(difficulty float32) (Target, big.Accuracy) {
+func TargetFromDifficulty(difficulty float64) (Target, big.Accuracy) {
 	highestTargetBig, success := new(big.Int).SetString(highestTarget, 16)
 	if !success {
 		panic("Failed to convert highest target value to big int")
 	}
 	highestTargetBigFloat := new(big.Float).SetInt(highestTargetBig)
 
-	difficultyBigFloat := new(big.Float).SetFloat64(float64(difficulty))
+	difficultyBigFloat := new(big.Float).SetFloat64(difficulty)
 
 	targetBigFloat := new(big.Float).Quo(highestTargetBigFloat, difficultyBigFloat)
 

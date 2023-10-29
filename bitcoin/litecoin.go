@@ -18,7 +18,7 @@ func (Litecoin) HeaderDigest(header string) (string, error) {
 	return ScryptDigest(header)
 }
 
-func (Litecoin) ShareMultiplier() float32 {
+func (Litecoin) ShareMultiplier() float64 {
 	return 65536
 }
 

@@ -73,7 +73,7 @@ func (b *BitcoinBlock) MakeHeader(extranonce, nonce, nonceTime string) (string, 
 	}
 
 	b.coinbase = coinbase.Serialize()
-	coinbaseHashed, err := b.chain.CoinbaseDigest(b.coinbase)
+	coinbaseHashed, err := b.CoinbaseHashed()
 	if err != nil {
 		return "", err
 	}
@@ -94,8 +94,22 @@ func (b *BitcoinBlock) MakeHeader(extranonce, nonce, nonceTime string) (string, 
 	return b.header, nil
 }
 
-func (b *BitcoinBlock) Header() string {
-	return b.header
+func (b *BitcoinBlock) HeaderHashed() (string, error) {
+	// TODO - break out headerdigest vs blockdigest
+	header, err := b.chain.CoinbaseDigest(b.header)
+	if err != nil {
+		return "", err
+	}
+	// Not sure if this is for litecoin only, but..
+	header, err = reverseHexBytes(header)
+	if err != nil {
+		return "", err
+	}
+	return header, nil
+}
+
+func (b *BitcoinBlock) CoinbaseHashed() (string, error) {
+	return b.chain.CoinbaseDigest(b.coinbase)
 }
 
 func (b *BitcoinBlock) Sum() (*big.Int, error) {

@@ -69,6 +69,8 @@ func (p *PoolServer) recieveWorkFromClient(share bitcoin.Work, client *stratumCl
 	extranonce2 := share[extranonce2Slot].(string)
 	nonceTime := share[primaryBlockTemplate.NonceTimeSubmissionSlot()].(string)
 
+	// TODO - validate input
+
 	extranonce := client.extranonce1 + extranonce2
 
 	_, err = primaryBlockTemplate.MakeHeader(extranonce, nonce, nonceTime)
@@ -96,16 +98,22 @@ func (p *PoolServer) recieveWorkFromClient(share bitcoin.Work, client *stratumCl
 	m = fmt.Sprintf(m, heightMessage, client.ip)
 	log.Println(m)
 
+	blockTarget := bitcoin.Target(primaryBlockTemplate.Template.Target)
+	blockDifficulty, accuracy := blockTarget.ToDifficulty()
+	if accuracy != 0 {
+		log.Println("primary block target to diff conversion accuracy not exact")
+	}
+	blockDifficulty = blockDifficulty * primaryBlockTemplate.ShareMultiplier()
+
 	p.Lock()
 	p.shareBuffer = append(p.shareBuffer, persistence.Share{
-		PoolID:      p.config.PoolName,
-		BlockHeight: primaryBlockHeight,
-		Miner:       minerAddress,
-		Worker:      rigID,
-		UserAgent:   client.userAgent,
-		Difficulty:  shareDifficulty,
-		// TODO - how often does this get refreshed?
-		NetworkDifficulty: p.GetPrimaryNode().NetworkDifficulty,
+		PoolID:            p.config.PoolName,
+		BlockHeight:       primaryBlockHeight,
+		Miner:             minerAddress,
+		Worker:            rigID,
+		UserAgent:         client.userAgent,
+		Difficulty:        shareDifficulty,
+		NetworkDifficulty: blockDifficulty,
 		IpAddress:         client.ip,
 		Created:           time.Now(),
 	})
@@ -123,14 +131,14 @@ func (p *PoolServer) recieveWorkFromClient(share bitcoin.Work, client *stratumCl
 	log.Println(m)
 
 	found := persistence.Found{
-		PoolID: p.config.PoolName,
-		Status: persistence.StatusPending,
-		// Type: "", // que?
+		PoolID:               p.config.PoolName,
+		Status:               persistence.StatusPending,
+		Type:                 statusReadable,
 		ConfirmationProgress: 0,
-		// Effort: 0, // que?
-		// TransactionConfirmationData: "",
+		// Effort: 0, // Filled by payout processor later down the road
+		// TransactionConfirmationData: "", // TODO - Return from submit..
 		Miner: minerAddress,
-		// Reward: 0, // TODO
+		// Reward: 0, // Filled by payout processor later down the road
 		Source: "",
 	}
 
@@ -140,11 +148,22 @@ func (p *PoolServer) recieveWorkFromClient(share bitcoin.Work, client *stratumCl
 		if err != nil {
 			log.Println(err)
 		} else {
+			// EnrichShare
+			aux1Target := bitcoin.Target(reverseHexBytes(auxBlock.Target))
+			aux1Difficulty, accuracy := aux1Target.ToDifficulty()
+			if accuracy != 0 {
+				log.Println("aux block target to diff conversion accuracy not exact")
+			}
+			aux1Difficulty = aux1Difficulty / bitcoin.GetChain(aux1Name).ShareMultiplier()
+
 			found.Chain = aux1Name
 			found.Created = time.Now()
 			found.Hash = auxBlock.Hash
-			found.NetworkDifficulty = p.GetAux1Node().NetworkDifficulty
+			found.NetworkDifficulty = aux1Difficulty
 			found.BlockHeight = uint(auxBlock.Height)
+			// TODO - I may have to edit dogecoind.exe
+			found.TransactionConfirmationData = "" // I'm not sure we can get the coinbase from this..
+
 			err = persistence.Blocks.Insert(found)
 			if err != nil {
 				log.Println(err)
@@ -161,9 +180,17 @@ func (p *PoolServer) recieveWorkFromClient(share bitcoin.Work, client *stratumCl
 		} else {
 			found.Chain = p.config.GetPrimary()
 			found.Created = time.Now()
-			found.Hash = primaryBlockTemplate.Header()
-			found.NetworkDifficulty = p.GetPrimaryNode().NetworkDifficulty
+			found.Hash, err = primaryBlockTemplate.HeaderHashed()
+			if err != nil {
+				log.Println(err)
+			}
+			found.NetworkDifficulty = blockDifficulty
 			found.BlockHeight = primaryBlockHeight
+			found.TransactionConfirmationData, err = primaryBlockTemplate.CoinbaseHashed()
+			if err != nil {
+				log.Println(err)
+			}
+
 			err = persistence.Blocks.Insert(found)
 			if err != nil {
 				log.Println(err)
