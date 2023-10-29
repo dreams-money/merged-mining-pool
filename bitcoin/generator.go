@@ -8,9 +8,10 @@ import (
 )
 
 type Generator interface {
-	Header(extranonce, nonce string) (string, error) // On aux generation, on work verfication, and possibily even work submission
-	Sum() (*big.Int, error)                          // On work verification, many, more than than header generation
-	Submit() (string, error)                         // On submission
+	MakeHeader(extranonce, nonce string) (string, error) // On aux generation, on work verfication, and possibily even work submission
+	Header() string
+	Sum() (*big.Int, error)  // On work verification, many, more than than header generation
+	Submit() (string, error) // On submission
 }
 
 var jobCounter int
@@ -59,7 +60,7 @@ func GenerateWork(template *Template, auxBlock *AuxBlock, chainName, arbitrary, 
 
 }
 
-func (b *BitcoinBlock) Header(extranonce, nonce, nonceTime string) (string, error) {
+func (b *BitcoinBlock) MakeHeader(extranonce, nonce, nonceTime string) (string, error) {
 	if b.Template == nil {
 		return "", errors.New("Generate work first")
 	}
@@ -91,6 +92,10 @@ func (b *BitcoinBlock) Header(extranonce, nonce, nonceTime string) (string, erro
 	}
 
 	return b.header, nil
+}
+
+func (b *BitcoinBlock) Header() string {
+	return b.header
 }
 
 func (b *BitcoinBlock) Sum() (*big.Int, error) {

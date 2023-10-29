@@ -19,6 +19,7 @@ type stratumClient struct {
 	login                 string
 	extranonce1           string
 	extranonce_subscribed bool
+	userAgent             string
 
 	sessionID     int
 	connection    net.Conn

@@ -18,7 +18,7 @@ var statusMap = map[int]string{
 	4: "Dual",
 }
 
-func verifyShare(primary *bitcoin.BitcoinBlock, aux1 *bitcoin.AuxBlock, share bitcoin.Work, poolDifficulty float32) int {
+func validateAndWeighShare(primary *bitcoin.BitcoinBlock, aux1 *bitcoin.AuxBlock, share bitcoin.Work, poolDifficulty float32) (int, float64) {
 	primarySum, err := primary.Sum()
 	logOnError(err)
 
@@ -45,15 +45,18 @@ func verifyShare(primary *bitcoin.BitcoinBlock, aux1 *bitcoin.AuxBlock, share bi
 	}
 
 	if status > shareInvalid {
-		return status
+		return status, 0
 	}
 
 	poolTarget, _ := bitcoin.TargetFromDifficulty(poolDifficulty / float32(primary.ShareMultiplier()))
 	poolTargettBig, _ := poolTarget.ToBig()
 
+	// TODO - use bitcoin Diff From target
+	shareDifficulty := float64(0)
+
 	if primarySum.Cmp(poolTargettBig) <= 0 {
-		return shareValid
+		return shareValid, shareDifficulty
 	}
 
-	return shareInvalid
+	return shareInvalid, shareDifficulty
 }

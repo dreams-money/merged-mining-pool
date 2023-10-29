@@ -3,20 +3,24 @@ package pool
 import (
 	"errors"
 	"log"
+	"sync"
 	"time"
 
 	"designs.capital/dogepool/bitcoin"
 	"designs.capital/dogepool/config"
+	"designs.capital/dogepool/persistence"
 )
 
 const maxHistory = 3
 
 type PoolServer struct {
+	sync.RWMutex
 	config            *config.Config
 	activeNodes       blockChainNodesMap
 	connectionTimeout time.Duration
 	templates         Pair
 	workCache         bitcoin.Work
+	shareBuffer       []persistence.Share
 }
 
 func NewServer(cfg *config.Config) *PoolServer {
@@ -38,14 +42,13 @@ func NewServer(cfg *config.Config) *PoolServer {
 func (pool *PoolServer) Start() {
 	initiateSessions()
 	pool.loadBlockchainNodes()
+	pool.startBufferManager()
+
 	pool.templates.AuxBlocks = make([]bitcoin.AuxBlock, len(pool.config.BlockChainOrder)-1)
 
 	// Initial work creation
 	panicOnError(pool.fetchRpcBlockTemplatesAndCacheWork())
 	work, err := pool.generateWorkFromCache(false)
-
-	go pool.listenForConnections()
-
 	panicOnError(err)
 
 	go pool.listenForConnections()
@@ -101,5 +104,11 @@ func panicOnError(e error) {
 func logOnError(e error) {
 	if e != nil {
 		log.Println(e)
+	}
+}
+
+func logFatalOnError(e error) {
+	if e != nil {
+		log.Fatal(e)
 	}
 }

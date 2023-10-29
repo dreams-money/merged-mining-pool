@@ -19,6 +19,15 @@ type blockChainNode struct {
 	Network            string
 	RewardPubScriptKey string // TODO - this is very bitcoin specific.  Abstract to interface.
 	RewardAddress      string
+	NetworkDifficulty  float64
+}
+
+func (p *PoolServer) GetPrimaryNode() blockChainNode {
+	return p.activeNodes[p.config.GetPrimary()]
+}
+
+func (p *PoolServer) GetAux1Node() blockChainNode {
+	return p.activeNodes[p.config.GetAux1()]
 }
 
 type hashblockCounterMap map[string]uint32 // "blockChainName" => hashblock msg counter
@@ -34,10 +43,10 @@ func (pool *PoolServer) loadBlockchainNodes() {
 		rpcClient := rpc.NewRPCClient(node.Name, node.RPC_URL, node.RPC_Username, node.RPC_Password, node.Timeout)
 
 		chainInfo, err := rpcClient.GetBlockChainInfo()
-		panicOnError(err)
+		logFatalOnError(err)
 
 		address, err := rpcClient.ValidateAddress(node.RewardAddress)
-		panicOnError(err)
+		logFatalOnError(err)
 		rewardPubScriptKey := address.ScriptPubKey
 
 		newNode := blockChainNode{
@@ -46,6 +55,7 @@ func (pool *PoolServer) loadBlockchainNodes() {
 			Network:            chainInfo.Chain,
 			RewardPubScriptKey: rewardPubScriptKey,
 			RewardAddress:      node.RewardAddress,
+			NetworkDifficulty:  chainInfo.NetworkDifficulty,
 		}
 		pool.activeNodes[blockChainName] = newNode
 	}

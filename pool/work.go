@@ -4,10 +4,14 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strings"
+	"time"
 
 	"designs.capital/dogepool/bitcoin"
+	"designs.capital/dogepool/persistence"
 )
 
+// Main INPUT
 func (p *PoolServer) fetchRpcBlockTemplatesAndCacheWork() error {
 	var block *bitcoin.BitcoinBlock
 	var err error
@@ -18,8 +22,7 @@ func (p *PoolServer) fetchRpcBlockTemplatesAndCacheWork() error {
 
 	auxillary := p.config.BlockSignature
 	if auxblock != nil {
-		mergedPOW := bitcoin.MergedMiningHeader +
-			auxblock.Hash + bitcoin.MergedMiningTrailer
+		mergedPOW := auxblock.GetWork()
 		auxillary = auxillary + hexStringToByteString(mergedPOW)
 
 		p.templates.AuxBlocks = []bitcoin.AuxBlock{*auxblock}
@@ -48,7 +51,17 @@ func (p *PoolServer) recieveWorkFromClient(share bitcoin.Work, client *stratumCl
 		return errors.New("Primary block template not yet set")
 	}
 	auxBlock := p.templates.GetAux1()
+
 	var err error
+
+	// TODO - this key and interface isn't very invertable..
+	workerString := share[0].(string)
+	workerStringParts := strings.Split(workerString, ".")
+	if len(workerStringParts) < 2 {
+		return errors.New("Invalid miner address")
+	}
+	minerAddress := workerStringParts[0]
+	rigID := workerStringParts[1]
 
 	primaryBlockHeight := primaryBlockTemplate.Template.Height
 	nonce := share[primaryBlockTemplate.NonceSubmissionSlot()].(string)
@@ -58,22 +71,22 @@ func (p *PoolServer) recieveWorkFromClient(share bitcoin.Work, client *stratumCl
 
 	extranonce := client.extranonce1 + extranonce2
 
-	_, err = primaryBlockTemplate.Header(extranonce, nonce, nonceTime)
+	_, err = primaryBlockTemplate.MakeHeader(extranonce, nonce, nonceTime)
 
 	if err != nil {
 		return err
 	}
 
-	status := verifyShare(&primaryBlockTemplate, auxBlock, share, p.config.PoolDifficulty)
+	shareStatus, shareDifficulty := validateAndWeighShare(&primaryBlockTemplate, auxBlock, share, p.config.PoolDifficulty)
 
 	heightMessage := fmt.Sprintf("%v", primaryBlockHeight)
-	if status == dualCandidate {
+	if shareStatus == dualCandidate {
 		heightMessage = fmt.Sprintf("%v,%v", primaryBlockHeight, auxBlock.Height)
-	} else if status == aux1Candidate {
+	} else if shareStatus == aux1Candidate {
 		heightMessage = fmt.Sprintf("%v", auxBlock.Height)
 	}
 
-	if status == shareInvalid {
+	if shareStatus == shareInvalid {
 		m := "❔ Invalid share for block %v from %v"
 		m = fmt.Sprintf(m, heightMessage, client.ip)
 		return errors.New(m)
@@ -83,34 +96,88 @@ func (p *PoolServer) recieveWorkFromClient(share bitcoin.Work, client *stratumCl
 	m = fmt.Sprintf(m, heightMessage, client.ip)
 	log.Println(m)
 
-	if status == shareValid {
+	p.Lock()
+	p.shareBuffer = append(p.shareBuffer, persistence.Share{
+		PoolID:      p.config.PoolName,
+		BlockHeight: primaryBlockHeight,
+		Miner:       minerAddress,
+		Worker:      rigID,
+		UserAgent:   client.userAgent,
+		Difficulty:  shareDifficulty,
+		// TODO - how often does this get refreshed?
+		NetworkDifficulty: p.GetPrimaryNode().NetworkDifficulty,
+		IpAddress:         client.ip,
+		Created:           time.Now(),
+	})
+	p.Unlock()
+
+	if shareStatus == shareValid {
 		return nil
 	}
 
-	statusReadable := statusMap[status]
+	statusReadable := statusMap[shareStatus]
+	successStatus := 0
 
 	m = "%v block candidate for block %v from %v"
 	m = fmt.Sprintf(m, statusReadable, heightMessage, client.ip)
 	log.Println(m)
 
-	auxStatus := 0
+	found := persistence.Found{
+		PoolID: p.config.PoolName,
+		Status: persistence.StatusPending,
+		// Type: "", // que?
+		ConfirmationProgress: 0,
+		// Effort: 0, // que?
+		// TransactionConfirmationData: "",
+		Miner: minerAddress,
+		// Reward: 0, // TODO
+		Source: "",
+	}
+
 	aux1Name := p.config.GetAux1()
-	if aux1Name != "" && status > aux1Candidate {
+	if aux1Name != "" && shareStatus >= aux1Candidate {
 		err = p.submitAuxBlock(primaryBlockTemplate, *auxBlock, aux1Name)
 		if err != nil {
 			log.Println(err)
-			auxStatus = 2
+		} else {
+			found.Chain = aux1Name
+			found.Created = time.Now()
+			found.Hash = auxBlock.Hash
+			found.NetworkDifficulty = p.GetAux1Node().NetworkDifficulty
+			found.BlockHeight = uint(auxBlock.Height)
+			err = persistence.Blocks.Insert(found)
+			if err != nil {
+				log.Println(err)
+			}
+
+			successStatus = aux1Candidate
 		}
 	}
 
-	if status == dualCandidate || status == primaryCandidate {
+	if shareStatus == dualCandidate || shareStatus == primaryCandidate {
 		err = p.submitBlockToChain(primaryBlockTemplate, share, p.config.GetPrimary())
 		if err != nil {
 			return err
+		} else {
+			found.Chain = p.config.GetPrimary()
+			found.Created = time.Now()
+			found.Hash = primaryBlockTemplate.Header()
+			found.NetworkDifficulty = p.GetPrimaryNode().NetworkDifficulty
+			found.BlockHeight = primaryBlockHeight
+			err = persistence.Blocks.Insert(found)
+			if err != nil {
+				log.Println(err)
+			}
+			found.Chain = ""
+			if successStatus == aux1Candidate {
+				successStatus = dualCandidate
+			} else {
+				successStatus = primaryCandidate
+			}
 		}
 	}
 
-	statusReadable = statusMap[status-auxStatus]
+	statusReadable = statusMap[successStatus]
 
 	log.Printf("✅  Successful %v submission of block %v from: %v", statusReadable, heightMessage, client.ip)
 

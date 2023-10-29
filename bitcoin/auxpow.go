@@ -2,6 +2,11 @@ package bitcoin
 
 import "fmt"
 
+const (
+	mergedMiningHeader  = "fabe6d6d"
+	mergedMiningTrailer = "010000000000000000002632"
+)
+
 type AuxBlock struct {
 	Hash              string `json:"hash"`
 	ChainID           int    `json:"chainid"`
@@ -12,10 +17,9 @@ type AuxBlock struct {
 	Target            string `json:"target"`
 }
 
-const (
-	MergedMiningHeader  = "fabe6d6d"
-	MergedMiningTrailer = "010000000000000000002632"
-)
+func (b *AuxBlock) GetWork() string {
+	return mergedMiningHeader + b.Hash + mergedMiningTrailer
+}
 
 type AuxPow struct {
 	ParentCoinbase   string

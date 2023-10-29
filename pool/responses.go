@@ -77,6 +77,7 @@ func miningSubscribe(request *stratumRequest, client *stratumClient) (stratumRes
 	if len(requestParams) > 0 {
 		clientType := requestParams[0]
 		log.Println("New subscription from client type: " + clientType)
+		client.userAgent = clientType
 	}
 
 	// TODO - make this random.  This currently profiles the amount of connections we have

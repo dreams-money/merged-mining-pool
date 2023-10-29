@@ -9,6 +9,7 @@ import (
 
 	"designs.capital/dogepool/api"
 	"designs.capital/dogepool/config"
+	"designs.capital/dogepool/persistence"
 	"designs.capital/dogepool/pool"
 )
 
@@ -17,12 +18,18 @@ func main() {
 	if configFileName == "" {
 		configFileName = "config.json"
 	}
+	configuration := config.LoadConfig(configFileName)
 
-	go startPoolServer(configFileName)
-	go startAPIServer()
-	// go startPayoutService()
+	err := persistence.MakePersister(configuration)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	startStatsService()
+	startPoolServer(configuration)
+	startAPIServer(configuration)
+	// startPayoutService(configuration *config.Config)
+
+	startStatsService(configuration)
 
 	// blocker := make(chan struct{})
 	// <-blocker
@@ -33,18 +40,18 @@ func parseCommandLineOptions() string {
 	return flag.Arg(0)
 }
 
-func startPoolServer(configFileName string) {
-	poolServer := pool.NewServer(config.LoadConfig(configFileName))
+func startPoolServer(configuration *config.Config) {
+	poolServer := pool.NewServer(configuration)
 	go poolServer.Start()
 	log.Println("Started Pool")
 }
 
-func startAPIServer() {
-	api.ListenAndServe()
+func startAPIServer(configuration *config.Config) {
+	go api.ListenAndServe()
 	log.Println("Started API")
 }
 
-func startStatsService() {
+func startStatsService(configuration *config.Config) {
 	for {
 		var memStats runtime.MemStats
 		runtime.ReadMemStats(&memStats)
@@ -54,10 +61,10 @@ func startStatsService() {
 		log.Printf("Total System Memory: %v", memStats.Sys)
 		log.Printf("Total Memory Allocated: %v", memStats.TotalAlloc)
 		fmt.Println("STATS END")
-		time.Sleep(time.Minute * 5)
+		time.Sleep(time.Second * 10)
 	}
 }
 
-func startPayoutService() {
+func startPayoutService(configuration *config.Config) {
 
 }

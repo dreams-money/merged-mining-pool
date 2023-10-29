@@ -4,7 +4,8 @@
     "max_connections": 99,
     "connection_timeout": "10s",
     "pool_difficulty": 2000,
-    "block_signature": "U'll fail U'll get back up Show your face to this defeat W ur chin high",
+    "block_signature": "dogemine.com ShowUrFace2DefeatWChinHi",
+    "share_flush_interval": "30s",
     "blockchains": {
         "dogecoin": [
             {
@@ -48,7 +49,15 @@
         ]
     },
     "merged_blockchain_order": [
-        "dogecoin",
-        "litecoin"
-    ]
+        "litecoin",
+        "dogecoin"
+    ],
+    "persistence": {
+        "host": "127.0.0.1",
+        "port": 5432,
+        "user": "miningcore",
+        "password": "bXVxE8Aye7hHz9dSdscfTfZGJXMr9TWQ",
+        "database": "miningcore",
+        "sslmode": "disable"
+    }
 }

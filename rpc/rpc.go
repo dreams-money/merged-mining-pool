@@ -314,7 +314,8 @@ func (r *RPCClient) ValidateAddress(address string) (validateAddressResponse, er
 }
 
 type blockChainInfoResponse struct {
-	Chain string `json:"chain"`
+	Chain             string  `json:"chain"`
+	NetworkDifficulty float64 `json:"difficulty"`
 }
 
 func (r *RPCClient) GetBlockChainInfo() (blockChainInfoResponse, error) {
