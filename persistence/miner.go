@@ -2,6 +2,8 @@ package persistence
 
 import (
 	"database/sql"
+	"errors"
+	"fmt"
 	"log"
 	"time"
 )
@@ -64,7 +66,7 @@ type MinerRepository struct {
 
 func (r *MinerRepository) GetSettings(poolID, miner string) (MinerSettings, error) {
 	var settings MinerSettings
-	query := "SELECT poolid, address, paymentthreshold, created, updated FROM miner_settings WHERE poolid = ? AND address = ?"
+	query := "SELECT poolid, address, paymentthreshold, created, updated FROM miner_settings WHERE poolid = $1 AND address = $2"
 
 	stmt, err := r.DB.Prepare(query)
 	if err != nil {
@@ -82,10 +84,10 @@ func (r *MinerRepository) GetSettings(poolID, miner string) (MinerSettings, erro
 
 func (r *MinerRepository) UpdateSettings(settings MinerSettings) error {
 	query := "INSERT INTO miner_settings(poolid, address, paymentthreshold, created, updated) "
-	query = query + "VALUES(?, ?, ?, now(), now()) "
+	query = query + "VALUES($1, $2, $3, now(), now()) "
 	query = query + "ON CONFLICT ON CONSTRAINT miner_settings_pkey DO UPDATE "
-	query = query + "SET paymentthreshold = ?, updated = now() "
-	query = query + "WHERE miner_settings.poolid = ? AND miner_settings.address = ?"
+	query = query + "SET paymentthreshold = $4, updated = now() "
+	query = query + "WHERE miner_settings.poolid = $5 AND miner_settings.address = $6"
 
 	stmt, err := r.DB.Prepare(query)
 	if err != nil {
@@ -99,23 +101,22 @@ func (r *MinerRepository) UpdateSettings(settings MinerSettings) error {
 
 func (r *MinerRepository) InsertMinerWorkerPerformanceStats(stat MinerStat) error {
 	query := "INSERT INTO minerstats(poolid, miner, worker, hashrate, sharespersecond, created) "
-	query = query + "VALUES(?, ?, ?, ?, ?, ?)"
+	query = query + "VALUES($1, $2, $3, $4, $5, $6)"
 
 	stmt, err := r.DB.Prepare(query)
 	if err != nil {
 		return err
 	}
 
-	_, err = stmt.Exec(&stat.PoolID, &stat.Miner, &stat.Worker, &stat.Hashrate,
-		&stat.SharesPerSecond, &stat.Created)
+	_, err = stmt.Exec(stat.PoolID, stat.Miner, stat.Worker, stat.Hashrate, stat.SharesPerSecond, stat.Created)
 	return err
 }
 
 func (r *MinerRepository) GetMinerStatsReport(poolID, address string, payments *PaymentRepository) (*MinerReport, error) {
-	query := "SELECT (SELECT SUM(difficulty) FROM shares WHERE poolid = ? AND miner = ?) AS pendingshares, "
-	query = query + "(SELECT amount FROM balances WHERE poolid = ? AND address = ?) AS pendingbalance, "
-	query = query + "(SELECT SUM(amount) FROM payments WHERE poolid = ? and address = ?) AS totalpaid, "
-	query = query + "(SELECT SUM(amount) FROM payments WHERE poolid = ? and address = ? and created >= date_trunc('day', now())) AS todaypaid"
+	query := "SELECT (SELECT SUM(difficulty) FROM shares WHERE poolid = $1 AND miner = $2) AS pendingshares, "
+	query = query + "(SELECT amount FROM balances WHERE poolid = $1 AND miner = $2) AS pendingbalance, "
+	query = query + "(SELECT SUM(amount) FROM payments WHERE poolid = $1 AND miner = $2) AS totalpaid, "
+	query = query + "(SELECT SUM(amount) FROM payments WHERE poolid = $1 AND miner = $2 and created >= date_trunc('day', now())) AS todaypaid"
 
 	stmt, err := r.DB.Prepare(query)
 	if err != nil {
@@ -124,7 +125,7 @@ func (r *MinerRepository) GetMinerStatsReport(poolID, address string, payments *
 
 	report := MinerReport{}
 
-	row := stmt.QueryRow(poolID, address, poolID, address, poolID, address, poolID, address)
+	row := stmt.QueryRow(poolID, address)
 	if row == nil {
 		return nil, nil
 	}
@@ -170,9 +171,79 @@ func (r *MinerRepository) GetMinerStatsReport(poolID, address string, payments *
 	return &report, nil
 }
 
+func (r *MinerRepository) GetMinerPerformaceBetweenTimeAtXMinuteIntervals(poolID, address string, start, end time.Time, xMinutes uint) (*WorkersReport, error) {
+	query := `SELECT date_trunc('hour', created) AS created,
+	(extract(minute FROM created)::int / %v) AS partition,
+	worker, AVG(hashrate) AS hashrate, AVG(sharespersecond) AS sharespersecond
+	FROM minerstats
+	WHERE poolid = $1 AND miner = $2 AND created >= $3 AND created <= $4
+	GROUP BY 1, 2, worker
+	ORDER BY 1, 2, worker`
+	query = fmt.Sprintf(query, xMinutes)
+
+	rows, err := r.DB.Query(query, poolID, address, start, end)
+	if err != nil {
+		return nil, err
+	}
+
+	report := newWorkerReport()
+	var stats []MinerStat
+	for rows.Next() {
+		var stat MinerStat
+		err = rows.Scan(&stat)
+		stats = append(stats, stat)
+	}
+
+	return &report, nil
+}
+
+func (r *MinerRepository) GetMinerPerformaceBetweenTimesAtInterval(poolID, address string, start, end time.Time, interval time.Duration) (*WorkersReport, error) {
+	intervalMap := make(map[time.Duration]string)
+	intervalMap[time.Minute] = "minute"
+	intervalMap[time.Hour] = "hour"
+	intervalMap[time.Hour*24] = "day"
+
+	intervalString, intervalExists := intervalMap[interval]
+	if !intervalExists {
+		return nil, errors.New("Invalid input interval")
+	}
+
+	query := `SELECT poolid, miner, worker, date_trunc('%v', created) AS created, AVG(hashrate) AS hashrate,
+	AVG(sharespersecond) AS sharespersecond FROM minerstats
+	WHERE poolid = $1 AND miner = $2 AND created >= $3 AND created <= $4
+	GROUP BY date_trunc('%v', created), worker
+	ORDER BY created, worker;`
+	query = fmt.Sprintf(query, intervalString)
+
+	stmt, err := r.DB.Prepare(query)
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := stmt.Query(poolID, address, start, end)
+	if err != nil {
+		return nil, err
+	}
+
+	// We definitely massage the data a bit more..
+
+	report := newWorkerReport()
+	for rows.Next() {
+		var stat MinerStat
+		err = rows.Scan(&stat.PoolID, &stat.Miner, &stat.Worker, &stat.Created, &stat.Hashrate, &stat.SharesPerSecond)
+		if err != nil {
+			return &report, err
+		}
+
+		// report.Workers[stat.Worker] = stat
+	}
+
+	return &report, nil
+}
+
 func (r *MinerRepository) GetMinerStatByCreatedTime(poolID, address string, created time.Time) (*MinerStat, error) {
 	var stat MinerStat
-	query := "SELECT poolid, miner, worker, hashrate, sharespersecond, created FROM minerstats WHERE poolid = ? AND miner = ? AND created = ?"
+	query := "SELECT poolid, miner, worker, hashrate, sharespersecond, created FROM minerstats WHERE poolid = $1 AND miner = $2 AND created = $3"
 
 	stmt, err := r.DB.Prepare(query)
 	if err != nil {
@@ -210,13 +281,13 @@ func (r *MinerRepository) PageMinerHashrates(poolID string, from time.Time, page
 	query = query + "		ROW_NUMBER() OVER(PARTITION BY ms.miner ORDER BY ms.hashrate DESC) AS rk"
 	query = query + "	FROM (SELECT miner, SUM(hashrate) AS hashrate, SUM(sharespersecond) AS sharespersecond"
 	query = query + "	   FROM minerstats"
-	query = query + "	   WHERE poolid = ? AND created >= ? GROUP BY miner, created) ms"
+	query = query + "	   WHERE poolid = $1 AND created >= $2 GROUP BY miner, created) ms"
 	query = query + ") "
 	query = query + "SELECT t.miner, t.hashrate, t.sharespersecond "
 	query = query + "FROM tmp t "
 	query = query + "WHERE t.rk = 1 "
 	query = query + "ORDER by t.hashrate DESC "
-	query = query + "OFFSET ? FETCH NEXT ? ROWS ONLY"
+	query = query + "OFFSET $3 FETCH NEXT $4 ROWS ONLY"
 
 	stmt, err := r.DB.Prepare(query)
 	if err != nil {
@@ -247,7 +318,7 @@ func (r *MinerRepository) PageMinerHashrates(poolID string, from time.Time, page
 }
 
 func (r *MinerRepository) DeleteMinerStatsBefore(date time.Time) error {
-	query := "DELETE FROM minerstats WHERE created < @date"
+	query := "DELETE FROM minerstats WHERE created < $1"
 
 	stmt, err := r.DB.Prepare(query)
 	if err != nil {
@@ -259,7 +330,7 @@ func (r *MinerRepository) DeleteMinerStatsBefore(date time.Time) error {
 }
 
 func (r *MinerRepository) GetRecentyUsedIpAddresses(poolID, minerAddress string) ([]string, error) {
-	query := "SELECT DISTINCT s.ipaddress FROM (SELECT ipaddress FROM shares WHERE poolid = ? and miner = ? ORDER BY CREATED DESC LIMIT 100) s"
+	query := "SELECT DISTINCT s.ipaddress FROM (SELECT ipaddress FROM shares WHERE poolid = $1 and miner = $2 ORDER BY CREATED DESC LIMIT 100) s"
 
 	stmt, err := r.DB.Prepare(query)
 	if err != nil {
@@ -286,7 +357,7 @@ func (r *MinerRepository) GetRecentyUsedIpAddresses(poolID, minerAddress string)
 }
 
 func (r *MinerRepository) LastStatUpdate(poolID, miner string) (*time.Time, error) {
-	query := "SELECT created FROM minerstats WHERE poolid = ? AND miner = ? "
+	query := "SELECT created FROM minerstats WHERE poolid = $1 AND miner = $2 "
 	query = query + "ORDER BY created DESC LIMIT 1"
 
 	stmt, err := r.DB.Prepare(query)

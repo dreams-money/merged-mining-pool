@@ -61,7 +61,7 @@ func (r *ShareRepository) InsertBatch(shares []Share) error {
 
 func (r *ShareRepository) GetSharesBefore(poolID string, before time.Time, inclusive bool, pageSize int) ([]Share, error) {
 	query := "SELECT poolid, blockheight, difficulty, networkdifficulty, miner, worker, useragent, ipaddress, created "
-	query = query + "FROM shares WHERE poolid = ? AND created %v ? ORDER BY created DESC FETCH NEXT ? ROWS ONLY"
+	query = query + "FROM shares WHERE poolid = $1 AND created %v $2 ORDER BY created DESC FETCH NEXT $3 ROWS ONLY"
 	operator := "<"
 	if inclusive {
 		operator = "<="
@@ -95,7 +95,7 @@ func (r *ShareRepository) GetSharesBefore(poolID string, before time.Time, inclu
 }
 
 func (r *ShareRepository) CountSharesBefore(poolID string, before time.Time, inclusive bool) (uint, error) {
-	query := "SELECT count(*) FROM shares WHERE poolid = ? AND created < ?"
+	query := "SELECT count(*) FROM shares WHERE poolid = $1 AND created < $2"
 
 	stmt, err := r.DB.Prepare(query)
 	if err != nil {
@@ -112,7 +112,7 @@ func (r *ShareRepository) CountSharesBefore(poolID string, before time.Time, inc
 }
 
 func (r *ShareRepository) CountSharesByMiner(poolID, minerAddress string) (uint, error) {
-	query := "SELECT count(*) FROM shares WHERE poolid = ? AND miner = ?"
+	query := "SELECT count(*) FROM shares WHERE poolid = $1 AND miner = $2"
 
 	stmt, err := r.DB.Prepare(query)
 	if err != nil {
@@ -129,7 +129,7 @@ func (r *ShareRepository) CountSharesByMiner(poolID, minerAddress string) (uint,
 }
 
 func (r *ShareRepository) GetEffortBetweenCreated(poolID string, shareConst float64, start, end time.Time) (float64, error) {
-	query := "SELECT SUM((difficulty * ?) / networkdifficulty) FROM shares WHERE poolid = ? AND created > ? AND created < ?"
+	query := "SELECT SUM((difficulty * $1) / networkdifficulty) FROM shares WHERE poolid = $2 AND created > $3 AND created < $4"
 
 	stmt, err := r.DB.Prepare(query)
 	if err != nil {
@@ -146,7 +146,7 @@ func (r *ShareRepository) GetEffortBetweenCreated(poolID string, shareConst floa
 }
 
 func (r *ShareRepository) DeleteSharesByMiner(poolID, minerAddress string) error {
-	query := "DELETE FROM shares WHERE poolid = ? AND miner = ?"
+	query := "DELETE FROM shares WHERE poolid = $1 AND miner = $2"
 
 	stmt, err := r.DB.Prepare(query)
 	if err != nil {
@@ -158,7 +158,7 @@ func (r *ShareRepository) DeleteSharesByMiner(poolID, minerAddress string) error
 }
 
 func (r *ShareRepository) DeleteSharesBefore(poolID string, before time.Time) error {
-	query := "DELETE FROM shares WHERE poolid = ? AND created < ?"
+	query := "DELETE FROM shares WHERE poolid = $1 AND created < $2"
 
 	stmt, err := r.DB.Prepare(query)
 	if err != nil {
@@ -170,7 +170,7 @@ func (r *ShareRepository) DeleteSharesBefore(poolID string, before time.Time) er
 }
 
 func (r *ShareRepository) GetAccumulatedShareDifficultyBetween(poolID string, start, end time.Time) (float64, error) {
-	query := "SELECT SUM(difficulty) FROM shares WHERE poolid = ? AND created > ? AND created < ?"
+	query := "SELECT SUM(difficulty) FROM shares WHERE poolid = $1 AND created > $2 AND created < $3"
 
 	stmt, err := r.DB.Prepare(query)
 	if err != nil {
@@ -187,7 +187,7 @@ func (r *ShareRepository) GetAccumulatedShareDifficultyBetween(poolID string, st
 }
 
 func (r *ShareRepository) GetEffectiveAccumulatedShareDifficultyBetween(poolID string, start, end time.Time) (float64, error) {
-	query := "SELECT SUM(difficulty / networkdifficulty) FROM shares WHERE poolid = ? AND created > ? AND created < ?"
+	query := "SELECT SUM(difficulty / networkdifficulty) FROM shares WHERE poolid = $1 AND created > $2 AND created < $3"
 
 	stmt, err := r.DB.Prepare(query)
 	if err != nil {
@@ -216,7 +216,7 @@ func (r *ShareRepository) GetHashAccumulationBetween(poolID string, start, end t
 	hashSummary := MinerWorkerHashSummary{}
 
 	query := "SELECT SUM(difficulty), COUNT(difficulty), MIN(created) AS firstshare, MAX(created) AS lastshare, miner, worker "
-	query = query + "FROM shares WHERE poolid = ? AND created >= ? AND created <= ? GROUP BY miner, worker"
+	query = query + "FROM shares WHERE poolid = $1 AND created >= $2 AND created <= $3 GROUP BY miner, worker"
 
 	stmt, err := r.DB.Prepare(query)
 	if err != nil {
@@ -244,7 +244,7 @@ func (r *ShareRepository) GetAccumulatedUserAgentShareDifficultyBetween(poolID s
 
 	query := "SELECT SUM(difficulty) AS value, %v AS key FROM shares "
 	query = fmt.Sprint(query, userAgentString)
-	query = query + "WHERE poolid = ? AND created > ? AND created < ? GROUP BY key ORDER BY value DESC"
+	query = query + "WHERE poolid = $1 AND created > $2 AND created < $3 GROUP BY key ORDER BY value DESC"
 
 	stmt, err := r.DB.Prepare(query)
 	if err != nil {
@@ -275,7 +275,7 @@ func (r *ShareRepository) GetAccumulatedUserAgentShareDifficultyBetween(poolID s
 }
 
 func (r *ShareRepository) GetRecentyUsedIpAddresses(poolID string) ([]string, error) {
-	query := "SELECT DISTINCT s.ipaddress FROM shares WHERE poolid = ? ORDER BY CREATED DESC LIMIT 100"
+	query := "SELECT DISTINCT s.ipaddress FROM shares WHERE poolid = $1 ORDER BY CREATED DESC LIMIT 100"
 
 	stmt, err := r.DB.Prepare(query)
 	if err != nil {

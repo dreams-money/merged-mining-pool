@@ -27,18 +27,18 @@ type PoolRepository struct {
 }
 
 func (r *PoolRepository) InsertPoolStat(stat PoolStat) error {
-	query := "INSERT INTO poolstats(poolid, connectedminers, poolhashrate, networkhashrate, networkdifficulty, lastnetworkblocktime, "
-	query = query + "blockheight, connectedpeers, sharespersecond, created) "
-	query = query + "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+	query := "INSERT INTO poolstats(poolid, connectedminers, connectedworkers, poolhashrate, networkhashrate, networkdifficulty, "
+	query = query + "lastnetworkblocktime, blockheight, connectedpeers, sharespersecond, created) "
+	query = query + "VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)"
 
 	stmt, err := r.DB.Prepare(query)
 	if err != nil {
 		return err
 	}
 
-	_, err = stmt.Exec(&stat.PoolID, &stat.ConnectedMiners, &stat.ConnectedWorkers, &stat.PoolHashrate,
-		&stat.NetworkHashrate, &stat.NetworkDifficulty, &stat.LastNetworkBlockTime, &stat.BlockHeight,
-		&stat.ConnectedPeers, &stat.SharesPerSecond, &stat.Created)
+	_, err = stmt.Exec(stat.PoolID, stat.ConnectedMiners, stat.ConnectedWorkers, stat.PoolHashrate,
+		stat.NetworkHashrate, stat.NetworkDifficulty, stat.LastNetworkBlockTime, stat.BlockHeight,
+		stat.ConnectedPeers, stat.SharesPerSecond, stat.Created)
 	return err
 }
 
@@ -46,7 +46,7 @@ func (r *PoolRepository) GetLastStat(poolID string) (PoolStat, error) {
 	stat := PoolStat{}
 	query := "SELECT poolid, connectedminers, connectedworkers, poolhashrate, sharespersecond, networkhashrate, networkdifficulty, "
 	query = query + "lastnetworkblocktime, blockheight, connectedpeers, created "
-	query = query + "FROM poolstats WHERE poolid = ? ORDER BY created DESC FETCH NEXT 1 ROWS ONLY"
+	query = query + "FROM poolstats WHERE poolid = $1 ORDER BY created DESC FETCH NEXT 1 ROWS ONLY"
 
 	stmt, err := r.DB.Prepare(query)
 	if err != nil {
@@ -61,7 +61,7 @@ func (r *PoolRepository) GetLastStat(poolID string) (PoolStat, error) {
 }
 
 func (r *PoolRepository) TotalPoolPayments(poolID string) (float32, error) {
-	query := "SELECT sum(amount) FROM payments WHERE poolid = ?"
+	query := "SELECT sum(amount) FROM payments WHERE poolid = $1"
 
 	stmt, err := r.DB.Prepare(query)
 	if err != nil {
@@ -93,7 +93,7 @@ func (r *PoolRepository) PoolPerformanceBetween(poolID string, start, end time.T
 	query = query + "CAST(AVG(connectedminers) AS BIGINT) AS connectedminers "
 
 	query = query + "FROM poolstats "
-	query = query + "WHERE poolid = ? AND created >= ? AND created <= ? "
+	query = query + "WHERE poolid = $1 AND created >= $2 AND created <= $3 "
 	query = query + "GROUP BY date_trunc('%v', created) "
 	query = query + "ORDER BY created"
 
@@ -138,7 +138,7 @@ func (r *PoolRepository) MinerWorkerHashrates(poolID string) (MinerWorkerHashrat
 	query = query + "			ROW_NUMBER() OVER (partition BY miner, worker ORDER BY created DESC) as rk,"
 	query = query + "			miner, worker, hashrate"
 	query = query + "		FROM minerstats"
-	query = query + "		WHERE poolid = ?"
+	query = query + "		WHERE poolid = $1"
 	query = query + "	)"
 	query = query + "	SELECT miner, worker, hashrate"
 	query = query + "	FROM cte"
@@ -178,7 +178,7 @@ func (r *PoolRepository) MinerWorkerHashrates(poolID string) (MinerWorkerHashrat
 }
 
 func (r *PoolRepository) DeletePoolStatsBefore(date time.Time) error {
-	query := "DELETE FROM poolstats WHERE created < ?"
+	query := "DELETE FROM poolstats WHERE created < $1"
 
 	stmt, err := r.DB.Prepare(query)
 	if err != nil {

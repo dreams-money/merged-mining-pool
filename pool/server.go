@@ -44,7 +44,8 @@ func (pool *PoolServer) Start() {
 	pool.loadBlockchainNodes()
 	pool.startBufferManager()
 
-	pool.templates.AuxBlocks = make([]bitcoin.AuxBlock, len(pool.config.BlockChainOrder)-1)
+	amountOfChains := len(pool.config.BlockChainOrder) - 1
+	pool.templates.AuxBlocks = make([]bitcoin.AuxBlock, amountOfChains)
 
 	// Initial work creation
 	panicOnError(pool.fetchRpcBlockTemplatesAndCacheWork())

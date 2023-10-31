@@ -31,14 +31,14 @@ func (r *BalanceRepository) AddAmount(poolID, coin, address, usage string, amoun
 	now := time.Now()
 
 	query := "INSERT INTO balance_changes(poolid, coin, address, amount, usage, tags, created) "
-	query = query + "VALUES(?, ?, ?, ?, ?, ?, ?)"
+	query = query + "VALUES($1, $2, $3, $4, $5, $6, $7)"
 
 	stmt, err := r.DB.Prepare(query)
 	if err != nil {
 		return err
 	}
 
-	_, err = stmt.Exec(&poolID, &coin, &address, &amount, &usage, "", &now)
+	_, err = stmt.Exec(poolID, coin, address, amount, usage, "", now)
 	if err != nil {
 		return err
 	}
@@ -65,7 +65,7 @@ func (r *BalanceRepository) AddAmount(poolID, coin, address, usage string, amoun
 
 func (r *BalanceRepository) Insert(balance Balance) error {
 	query := "INSERT INTO balances(poolid, address, amount, created, updated) "
-	query = query + "VALUES(?, ?, ?, ?, ?)"
+	query = query + "VALUES($1, $2, $3, $4, $5)"
 
 	stmt, err := r.DB.Prepare(query)
 	if err != nil {
@@ -78,8 +78,8 @@ func (r *BalanceRepository) Insert(balance Balance) error {
 }
 
 func (r *BalanceRepository) Update(balance Balance) error {
-	query := "UPDATE balances SET amount = amount + ?, updated = now() at time zone 'utc' "
-	query = query + "WHERE poolid = ? AND coin = ? AND address = ?"
+	query := "UPDATE balances SET amount = amount + $1, updated = now() at time zone 'utc' "
+	query = query + "WHERE poolid = $2 AND coin = $3 AND address = $4"
 
 	stmt, err := r.DB.Prepare(query)
 	if err != nil {
@@ -91,7 +91,7 @@ func (r *BalanceRepository) Update(balance Balance) error {
 }
 
 func (r *BalanceRepository) GetBalance(poolID, coin, address string) (*float32, error) {
-	query := "SELECT amount FROM balances WHERE poolid = ? AND coin = ? AND address = ?"
+	query := "SELECT amount FROM balances WHERE poolid = $1 AND coin = $2 AND address = $3"
 
 	stmt, err := r.DB.Prepare(query)
 	if err != nil {
@@ -116,7 +116,7 @@ func (r *BalanceRepository) GetPoolBalancesOverThreshold(poolID string, minimum 
 	query := "SELECT b.poolid, b.address, b.created, b.updated "
 	query = query + "FROM balances b "
 	query = query + "LEFT JOIN miner_settings ms ON ms.poolid = b.poolid AND ms.address = b.address "
-	query = query + "WHERE b.poolid = ? AND b.amount >= COALESCE(ms.paymentthreshold, ?)"
+	query = query + "WHERE b.poolid = $1 AND b.amount >= COALESCE(ms.paymentthreshold, $2)"
 
 	stmt, err := r.DB.Prepare(query)
 	if err != nil {
@@ -144,8 +144,8 @@ func (r *BalanceRepository) GetPoolBalancesOverThreshold(poolID string, minimum 
 }
 
 func (r *PaymentRepository) PageBalanceChanges(poolID string, page, pageSize int) ([]BalanceChange, error) {
-	query := "SELECT * FROM balance_changes WHERE poolid = @poolid "
-	query = query + "ORDER BY created DESC OFFSET ? FETCH NEXT ? ROWS ONLY"
+	query := "SELECT * FROM balance_changes WHERE poolid = $1 "
+	query = query + "ORDER BY created DESC OFFSET $2 FETCH NEXT $3 ROWS ONLY"
 
 	stmt, err := r.DB.Prepare(query)
 	if err != nil {
@@ -173,7 +173,7 @@ func (r *PaymentRepository) PageBalanceChanges(poolID string, page, pageSize int
 }
 
 func (r *PaymentRepository) GetBalanceChangesCount(poolID string) (uint, error) {
-	query := "SELECT COUNT(*) FROM balance_changes WHERE poolid = ?"
+	query := "SELECT COUNT(*) FROM balance_changes WHERE poolid = $1"
 
 	stmt, err := r.DB.Prepare(query)
 	if err != nil {

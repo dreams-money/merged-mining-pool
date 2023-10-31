@@ -45,10 +45,10 @@ func (r *FoundRepository) Insert(block Found) error {
 }
 
 func (r *FoundRepository) Update(block Found) error {
-	query := "UPDATE blocks SET blockheight = ?, status = ?, type = ?, "
-	query = query + "reward = ?, effort = ?, "
-	query = query + "confirmationprogress = ?, hash = ? "
-	query = query + "WHERE id = ?"
+	query := "UPDATE blocks SET blockheight = $1, status = $2, type = $3, "
+	query = query + "reward = $4, effort = $5, "
+	query = query + "confirmationprogress = $6, hash = $7 "
+	query = query + "WHERE id = $8"
 
 	stmt, err := r.DB.Prepare(query)
 	if err != nil {
@@ -61,7 +61,7 @@ func (r *FoundRepository) Update(block Found) error {
 }
 
 func (r *FoundRepository) Delete(block Found) error {
-	query := "DELETE FROM blocks WHERE id = ?"
+	query := "DELETE FROM blocks WHERE id = $1"
 
 	stmt, err := r.DB.Prepare(query)
 	if err != nil {
@@ -75,8 +75,8 @@ func (r *FoundRepository) Delete(block Found) error {
 func (r *FoundRepository) PageBlocks(poolID string, blockStatus uint, page, pageSize int) ([]Found, error) {
 	query := "SELECT poolid, blockheight, networkdifficulty, status, type, confirmationprogress, "
 	query = query + "effort, transactionconfirmationdata, miner, reward, source, hash, created "
-	query = query + "FROM blocks WHERE poolid = ? AND status = ANY(?) "
-	query = query + "ORDER BY created DESC OFFSET ? FETCH NEXT ? ROWS ONLY"
+	query = query + "FROM blocks WHERE poolid = $1 AND status = ANY($2) "
+	query = query + "ORDER BY created DESC OFFSET $3 FETCH NEXT $4 ROWS ONLY"
 
 	stmt, err := r.DB.Prepare(query)
 	if err != nil {
@@ -108,8 +108,8 @@ func (r *FoundRepository) PageBlocks(poolID string, blockStatus uint, page, page
 func (r *FoundRepository) PageBlocksAcrossAllPools(blockStatus uint, page, pageSize int) ([]Found, error) {
 	query := "SELECT poolid, blockheight, networkdifficulty, status, type, confirmationprogress, "
 	query = query + "effort, transactionconfirmationdata, miner, reward, source, hash, created "
-	query = query + "FROM blocks WHERE status = ANY(?) "
-	query = query + "ORDER BY created DESC OFFSET ? FETCH NEXT ? ROWS ONLY"
+	query = query + "FROM blocks WHERE status = ANY($1) "
+	query = query + "ORDER BY created DESC OFFSET $2 FETCH NEXT $3 ROWS ONLY"
 
 	stmt, err := r.DB.Prepare(query)
 	if err != nil {
@@ -141,7 +141,7 @@ func (r *FoundRepository) PageBlocksAcrossAllPools(blockStatus uint, page, pageS
 func (r *FoundRepository) PendingBlocksForPool(poolID string) ([]Found, error) {
 	query := "SELECT poolid, blockheight, networkdifficulty, status, type, confirmationprogress, "
 	query = query + "effort, transactionconfirmationdata, miner, reward, source, hash, created "
-	query = query + "FROM blocks WHERE poolid = ? AND status = ?"
+	query = query + "FROM blocks WHERE poolid = $1 AND status = $2"
 
 	stmt, err := r.DB.Prepare(query)
 	if err != nil {
@@ -174,7 +174,7 @@ func (r *FoundRepository) BlocksBefore(poolID string, blockStatus int, before ti
 	query := `SELECT poolid, blockheight, networkdifficulty, status, type, confirmationprogress,
 				effort, transactionconfirmationdata, miner, reward, source, hash, created
 
-				FROM blocks WHERE poolid = ? AND status = ANY(?) AND created < ?
+				FROM blocks WHERE poolid = $1 AND status = ANY($2) AND created < $3
 				ORDER BY created DESC FETCH NEXT 1 ROWS ONLY`
 
 	stmt, err := r.DB.Prepare(query)
@@ -207,7 +207,7 @@ func (r *FoundRepository) BlocksBefore(poolID string, blockStatus int, before ti
 func (r *FoundRepository) BlockByHeight(poolID string, height uint) (*Found, error) {
 	query := `SELECT poolid, blockheight, networkdifficulty, status, type, confirmationprogress,
 			effort, transactionconfirmationdata, miner, reward, source, hash, created
-			FROM blocks WHERE poolid = ? AND blockheight = ?`
+			FROM blocks WHERE poolid = $1 AND blockheight = $2`
 
 	stmt, err := r.DB.Prepare(query)
 	if err != nil {
@@ -229,7 +229,7 @@ func (r *FoundRepository) BlockByHeight(poolID string, height uint) (*Found, err
 }
 
 func (r *FoundRepository) PoolBlockCount(poolID string) (uint, error) {
-	query := "SELECT COUNT(*) FROM blocks WHERE poolid = ?"
+	query := "SELECT COUNT(*) FROM blocks WHERE poolid = $1"
 
 	stmt, err := r.DB.Prepare(query)
 	if err != nil {
@@ -250,7 +250,7 @@ func (r *FoundRepository) PoolBlocksPerHour(poolID string) (uint, error) {
 
 	FROM public.blocks
 
-	WHERE poolid <> 'doge_test_pplns'
+	WHERE poolid = $1
 	AND created >= (now() - INTERVAL '1 HOURS')`
 
 	stmt, err := r.DB.Prepare(query)
@@ -268,7 +268,7 @@ func (r *FoundRepository) PoolBlocksPerHour(poolID string) (uint, error) {
 }
 
 func (r *FoundRepository) PoolLastBlockTime(poolID string) (*time.Time, error) {
-	query := "SELECT created FROM blocks WHERE poolid = ? ORDER BY created DESC LIMIT 1"
+	query := "SELECT created FROM blocks WHERE poolid = $1 ORDER BY created DESC LIMIT 1"
 
 	stmt, err := r.DB.Prepare(query)
 	if err != nil {
