@@ -206,30 +206,69 @@ func (r *ShareRepository) GetEffectiveAccumulatedShareDifficultyBetween(poolID s
 type MinerWorkerHashSummary struct {
 	Miner      string
 	Worker     string
-	Difficulty string
+	Difficulty float64
 	ShareCount uint
 	FirstShare time.Time
 	LastShare  time.Time
 }
 
-func (r *ShareRepository) GetHashAccumulationBetween(poolID string, start, end time.Time) (MinerWorkerHashSummary, error) {
-	hashSummary := MinerWorkerHashSummary{}
+type MinerWorkerHashSummaryResultSet []MinerWorkerHashSummary
+
+func (results *MinerWorkerHashSummaryResultSet) GroupByMiner() map[string][]MinerWorkerHashSummary {
+	miners := make(map[string][]MinerWorkerHashSummary)
+	for _, summary := range *results {
+		miner, exists := miners[summary.Miner]
+		if !exists {
+			var collection []MinerWorkerHashSummary
+			miner = collection
+		}
+
+		miner = append(miner, MinerWorkerHashSummary{
+			Miner:      summary.Miner,
+			Worker:     summary.Worker,
+			Difficulty: summary.Difficulty,
+			ShareCount: summary.ShareCount,
+			FirstShare: summary.FirstShare,
+			LastShare:  summary.LastShare,
+		})
+
+		miners[summary.Miner] = miner
+	}
+
+	return miners
+}
+
+func (r *ShareRepository) GetWorkerHashAccumulationBetween(poolID string, start, end time.Time) (MinerWorkerHashSummaryResultSet, error) {
 
 	query := "SELECT SUM(difficulty), COUNT(difficulty), MIN(created) AS firstshare, MAX(created) AS lastshare, miner, worker "
 	query = query + "FROM shares WHERE poolid = $1 AND created >= $2 AND created <= $3 GROUP BY miner, worker"
 
 	stmt, err := r.DB.Prepare(query)
 	if err != nil {
-		return hashSummary, err
+		return nil, err
 	}
 
-	err = stmt.QueryRow(poolID, start, end).Scan(&hashSummary.Difficulty, &hashSummary.ShareCount, &hashSummary.FirstShare,
-		&hashSummary.LastShare, &hashSummary.Miner, &hashSummary.Worker)
+	rows, err := stmt.Query(poolID, start, end)
 	if err != nil {
-		return hashSummary, err
+		return nil, err
+	}
+	if rows == nil {
+		return nil, nil
 	}
 
-	return hashSummary, nil
+	var workers []MinerWorkerHashSummary
+	for rows.Next() {
+		var worker MinerWorkerHashSummary
+		err = rows.Scan(&worker.Difficulty, &worker.ShareCount, &worker.FirstShare,
+			&worker.LastShare, &worker.Miner, &worker.Worker)
+		if err != nil {
+			return workers, err
+		}
+
+		workers = append(workers, worker)
+	}
+
+	return workers, nil
 }
 
 type UserAgentShareDifficultyMap map[string]float64 // UserAgent => Difficulty

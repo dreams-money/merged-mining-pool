@@ -29,7 +29,7 @@ type stratumClient struct {
 func (pool *PoolServer) listenForConnections() {
 	pool.connectionTimeout = mustParseDuration(pool.config.ConnectionTimeout)
 
-	addr, err := net.ResolveTCPAddr("tcp", pool.config.Port)
+	addr, err := net.ResolveTCPAddr("tcp", ":"+pool.config.Port)
 	if err != nil {
 		panicOnError(err)
 	}

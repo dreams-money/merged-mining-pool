@@ -44,18 +44,20 @@ CREATE INDEX IDX_BLOCKS_POOL_BLOCK_STATUS on blocks(poolid, chain, blockheight, 
 CREATE TABLE balances
 (
 	poolid TEXT NOT NULL,
+	chain text NOT NULL,
 	address TEXT NOT NULL,
 	amount decimal(28,12) NOT NULL DEFAULT 0,
 	created TIMESTAMPTZ NOT NULL,
 	updated TIMESTAMPTZ NOT NULL,
 
-	primary key(poolid, address)
+	primary key(poolid, chain, address)
 );
 
 CREATE TABLE balance_changes
 (
 	id BIGSERIAL NOT NULL PRIMARY KEY,
 	poolid TEXT NOT NULL,
+	chain text NOT NULL,
 	address TEXT NOT NULL,
 	amount decimal(28,12) NOT NULL DEFAULT 0,
 	usage TEXT NULL,
@@ -63,7 +65,7 @@ CREATE TABLE balance_changes
 	created TIMESTAMPTZ NOT NULL
 );
 
-CREATE INDEX IDX_BALANCE_CHANGES_POOL_ADDRESS_CREATED on balance_changes(poolid, address, created desc);
+CREATE INDEX IDX_BALANCE_CHANGES_POOL_ADDRESS_CREATED on balance_changes(poolid, chain, address, created desc);
 CREATE INDEX IDX_BALANCE_CHANGES_POOL_TAGS on balance_changes USING gin (tags);
 
 CREATE TABLE miner_settings
@@ -81,7 +83,7 @@ CREATE TABLE payments
 (
 	id BIGSERIAL NOT NULL PRIMARY KEY,
 	poolid TEXT NOT NULL,
-	coin TEXT NOT NULL,
+	chain TEXT NOT NULL,
 	address TEXT NOT NULL,
 	amount decimal(28,12) NOT NULL,
 	transactionconfirmationdata TEXT NOT NULL,

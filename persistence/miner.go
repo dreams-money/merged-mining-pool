@@ -10,46 +10,8 @@ import (
 
 const minerStatWindow = 20
 
-type MinerStat struct {
-	PoolID          string
-	Miner           string
-	Worker          string
-	Hashrate        float64
-	SharesPerSecond float64
-	Created         time.Time
-}
-
-type WorkerStat struct {
-	PoolID          string
-	Miner           string
-	Worker          string
-	Hashrate        float64
-	SharesPerSecond float64
-	Status          string
-	LastSeen        string
-	Rating          int64
-	Created         time.Time
-}
-
-type WorkersReport struct {
-	Created time.Time
-	Workers map[string]WorkerStat
-}
-
-func newWorkerReport() WorkersReport {
-	report := WorkersReport{}
-	report.Workers = make(map[string]WorkerStat)
-	return report
-}
-
-type MinerReport struct {
-	Created        time.Time
-	PendingShares  float64
-	PendingBalance float32
-	TotalPaid      float32
-	TodayPaid      float32
-	LastPayment    *Payment
-	WorkersReport
+type MinerRepository struct {
+	*sql.DB
 }
 
 type MinerSettings struct {
@@ -58,10 +20,6 @@ type MinerSettings struct {
 	PaymentThreshold float32
 	Created          time.Time
 	Updated          time.Time
-}
-
-type MinerRepository struct {
-	*sql.DB
 }
 
 func (r *MinerRepository) GetSettings(poolID, miner string) (MinerSettings, error) {
@@ -99,6 +57,15 @@ func (r *MinerRepository) UpdateSettings(settings MinerSettings) error {
 	return err
 }
 
+type MinerStat struct {
+	PoolID          string
+	Miner           string
+	Worker          string
+	Hashrate        float64
+	SharesPerSecond float64
+	Created         time.Time
+}
+
 func (r *MinerRepository) InsertMinerWorkerPerformanceStats(stat MinerStat) error {
 	query := "INSERT INTO minerstats(poolid, miner, worker, hashrate, sharespersecond, created) "
 	query = query + "VALUES($1, $2, $3, $4, $5, $6)"
@@ -112,33 +79,130 @@ func (r *MinerRepository) InsertMinerWorkerPerformanceStats(stat MinerStat) erro
 	return err
 }
 
-func (r *MinerRepository) GetMinerStatsReport(poolID, address string, payments *PaymentRepository) (*MinerReport, error) {
-	query := "SELECT (SELECT SUM(difficulty) FROM shares WHERE poolid = $1 AND miner = $2) AS pendingshares, "
-	query = query + "(SELECT amount FROM balances WHERE poolid = $1 AND miner = $2) AS pendingbalance, "
-	query = query + "(SELECT SUM(amount) FROM payments WHERE poolid = $1 AND miner = $2) AS totalpaid, "
-	query = query + "(SELECT SUM(amount) FROM payments WHERE poolid = $1 AND miner = $2 and created >= date_trunc('day', now())) AS todaypaid"
+type WorkerStat struct {
+	PoolID          string
+	Miner           string
+	Worker          string
+	Hashrate        float64
+	SharesPerSecond float64
+	Status          string
+	LastSeen        string
+	Rating          int64
+	Created         time.Time
+}
 
-	stmt, err := r.DB.Prepare(query)
-	if err != nil {
-		return nil, err
+type WorkersReport struct {
+	PendingShares float64
+	Created       time.Time
+	Workers       map[string]WorkerStat
+}
+
+func newWorkerReport() WorkersReport {
+	report := WorkersReport{}
+	report.Workers = make(map[string]WorkerStat)
+	return report
+}
+
+type MinerAccount struct {
+	PendingBalance float32
+	TotalPaid      float32
+	TodayPaid      float32
+	LastPayment    Payment
+}
+
+type ChainAccounts map[string]MinerAccount
+
+func (accounts *ChainAccounts) GetTotalPaidAmounts() map[string]float32 {
+	amounts := make(map[string]float32)
+	for chain, account := range *accounts {
+		amounts[chain] = account.TodayPaid
 	}
+	return amounts
+}
 
+type MinerReport struct {
+	Created time.Time
+	ChainAccounts
+	WorkersReport
+}
+
+func (r *MinerRepository) GetMinerStatsReport(poolID, address string, payments *PaymentRepository) (*MinerReport, error) {
 	report := MinerReport{}
 
-	row := stmt.QueryRow(poolID, address)
-	if row == nil {
-		return nil, nil
-	}
+	shares := `SELECT SUM(difficulty) FROM shares WHERE poolid = $1 AND miner = $2`
+	row := r.DB.QueryRow(shares, poolID, address)
+	err := row.Scan(&report.PendingShares)
 
-	err = row.Scan(&report.PendingShares, &report.PendingBalance, &report.TotalPaid, &report.TodayPaid)
+	var chain string
+	var amount float32
+	accounts := make(ChainAccounts)
+	pendingBalances := `SELECT chain, amount FROM balances WHERE poolid = $1 AND miner = $2 group by chain`
+	rows, err := r.DB.Query(pendingBalances, poolID, address)
 	if err != nil {
 		return nil, err
 	}
+	for rows.Next() {
+		err = rows.Scan(&chain, &amount)
 
-	report.LastPayment, err = payments.MinerLastPayment(poolID, address)
+		account, found := accounts[chain]
+		if !found {
+			account = MinerAccount{}
+		}
+
+		account.PendingBalance = amount
+		accounts[chain] = account
+	}
+
+	totalPaid := `select chain, sum(amount) AS amount from payments where poolid = $1 and miner = $2 group by chain`
+	rows, err = r.DB.Query(totalPaid, poolID, address)
 	if err != nil {
 		return nil, err
 	}
+	for rows.Next() {
+		err = rows.Scan(&chain, &amount)
+
+		account, found := accounts[chain]
+		if !found {
+			account = MinerAccount{}
+		}
+
+		account.TotalPaid = amount
+		accounts[chain] = account
+	}
+
+	totalPaidToday := `select chain, sum(amount) AS amount from payments
+	where poolid = $1 and miner = $2 and created >= date_trunc('day', now())) AS todaypaid  group by chain`
+	rows, err = r.DB.Query(totalPaidToday, poolID, address)
+	if err != nil {
+		return nil, err
+	}
+	for rows.Next() {
+		err = rows.Scan(&chain, &amount)
+
+		account, found := accounts[chain]
+		if !found {
+			account = MinerAccount{}
+		}
+
+		account.TodayPaid = amount
+		accounts[chain] = account
+	}
+
+	lastPayments, err := payments.MinerLastPayments(poolID, address)
+	if err != nil {
+		return nil, err
+	}
+	for chain, payment := range lastPayments {
+		account, found := accounts[chain]
+		if !found {
+			account = MinerAccount{}
+		}
+
+		account.LastPayment = payment
+		accounts[chain] = account
+	}
+
+	report.ChainAccounts = accounts
 
 	lastUpdate, err := r.LastStatUpdate(poolID, address)
 	if err != nil {
@@ -162,6 +226,7 @@ func (r *MinerRepository) GetMinerStatsReport(poolID, address string, payments *
 	}
 
 	report.Created = *lastUpdate
+	report.WorkersReport = newWorkerReport()
 	report.WorkersReport.Workers[stat.Worker] = WorkerStat{
 		Worker:          stat.Worker,
 		Hashrate:        stat.Hashrate,
@@ -171,7 +236,7 @@ func (r *MinerRepository) GetMinerStatsReport(poolID, address string, payments *
 	return &report, nil
 }
 
-func (r *MinerRepository) GetMinerPerformaceBetweenTimeAtXMinuteIntervals(poolID, address string, start, end time.Time, xMinutes uint) (*WorkersReport, error) {
+func (r *MinerRepository) GetMinerPerformaceBetweenTimeAtXMinuteIntervals(poolID, address string, start, end time.Time, xMinutes time.Duration) (*WorkersReport, error) {
 	query := `SELECT date_trunc('hour', created) AS created,
 	(extract(minute FROM created)::int / %v) AS partition,
 	worker, AVG(hashrate) AS hashrate, AVG(sharespersecond) AS sharespersecond

@@ -10,7 +10,7 @@ import (
 type Payment struct {
 	ID                          uint
 	PoolID                      string
-	Coin                        string
+	Chain                       string
 	Address                     string
 	Amount                      float32
 	TransactionConfirmationData string
@@ -30,7 +30,7 @@ func (r *PaymentRepository) Insert(payment Payment) error {
 		return err
 	}
 
-	_, err = stmt.Exec(&payment.PoolID, &payment.Coin, &payment.Address, &payment.Amount,
+	_, err = stmt.Exec(&payment.PoolID, &payment.Chain, &payment.Address, &payment.Amount,
 		&payment.TransactionConfirmationData, &payment.Created)
 	return err
 }
@@ -48,7 +48,7 @@ func (r *PaymentRepository) InsertBatch(payments []Payment) error {
 	}
 
 	for _, payment := range payments {
-		_, err = stmt.Exec(payment.PoolID, payment.Coin, payment.Address, payment.Amount,
+		_, err = stmt.Exec(payment.PoolID, payment.Chain, payment.Address, payment.Amount,
 			payment.TransactionConfirmationData, payment.Created)
 		if err != nil {
 			return err
@@ -94,7 +94,7 @@ func (r *PaymentRepository) PagePayments(poolID, miner string, page, pageSize in
 	for rows.Next() {
 		var payment Payment
 
-		err = rows.Scan(&payment.PoolID, &payment.Coin, &payment.Address, &payment.Amount,
+		err = rows.Scan(&payment.PoolID, &payment.Chain, &payment.Address, &payment.Amount,
 			&payment.TransactionConfirmationData, &payment.Created)
 		if err != nil {
 			return payments, err
@@ -132,7 +132,7 @@ func (r *PaymentRepository) PageMinerPaymentsByDay(poolID, miner string, page, p
 	for rows.Next() {
 		var payment Payment
 
-		err = rows.Scan(&payment.PoolID, &payment.Coin, &payment.Address, &payment.Amount,
+		err = rows.Scan(&payment.PoolID, &payment.Chain, &payment.Address, &payment.Amount,
 			&payment.TransactionConfirmationData, &payment.Created)
 		if err != nil {
 			return payments, err
@@ -204,26 +204,34 @@ func (r *PaymentRepository) MinerPaymentsByDayCount(poolID, miner string) (Payme
 	return paymentsByDay, nil
 }
 
-func (r *PaymentRepository) MinerLastPayment(poolID, miner string) (*Payment, error) {
-	query := "SELECT poolid, coin, address, amount, transactionconfirmationdata, created "
-	query = query + "FROM payments WHERE poolid = $1 AND address = $2 ORDER BY created DESC LIMIT 1"
+func (r *PaymentRepository) MinerLastPayments(poolID, miner string) (map[string]Payment, error) {
+	query := `SELECT poolid, coin, address, amount, transactionconfirmationdata, created
 
-	stmt, err := r.DB.Prepare(query)
-	if err != nil {
-		return nil, err
-	}
+			FROM payments
 
-	row := stmt.QueryRow(poolID, miner)
-	if row == nil {
+			WHERE poolid = $1 AND address = $2
+			AND created = (
+				SELECT max(b.created)
+				from payments b
+				where b.poolid = payments.poolid
+				and b.coin = payments.coin
+			)`
+
+	rows, err := r.DB.Query(query, poolID, miner)
+	if rows == nil {
 		return nil, nil
 	}
 
-	var payment Payment
-	err = row.Scan(&payment.PoolID, &payment.Coin, &payment.Address,
-		&payment.Amount, &payment.TransactionConfirmationData, &payment.Created)
-	if err != nil {
-		return nil, err
+	payments := make(map[string]Payment)
+	for rows.Next() {
+		var payment Payment
+		err = rows.Scan(&payment.PoolID, &payment.Chain, &payment.Address,
+			&payment.Amount, &payment.TransactionConfirmationData, &payment.Created)
+		if err != nil {
+			return nil, err
+		}
+		payments[payment.Chain] = payment
 	}
 
-	return &payment, nil
+	return payments, nil
 }

@@ -72,7 +72,7 @@ func (r *FoundRepository) Delete(block Found) error {
 	return err
 }
 
-func (r *FoundRepository) PageBlocks(poolID string, blockStatus uint, page, pageSize int) ([]Found, error) {
+func (r *FoundRepository) PageBlocks(poolID, blockStatus string, page, pageSize int) ([]Found, error) {
 	query := "SELECT poolid, blockheight, networkdifficulty, status, type, confirmationprogress, "
 	query = query + "effort, transactionconfirmationdata, miner, reward, source, hash, created "
 	query = query + "FROM blocks WHERE poolid = $1 AND status = ANY($2) "

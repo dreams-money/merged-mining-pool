@@ -7,7 +7,7 @@ import (
 
 type Balance struct {
 	PoolID  string
-	Coin    string
+	Chain   string
 	Address string
 	Amount  float32
 	Created time.Time
@@ -17,6 +17,7 @@ type Balance struct {
 type BalanceChange struct {
 	ID      uint
 	PoolID  string
+	Chain   string
 	Address string
 	Amount  float32
 	Usage   string
@@ -27,10 +28,10 @@ type BalanceRepository struct {
 	*sql.DB
 }
 
-func (r *BalanceRepository) AddAmount(poolID, coin, address, usage string, amount float32) error {
+func (r *BalanceRepository) AddAmount(poolID, chain, address, usage string, amount float32) error {
 	now := time.Now()
 
-	query := "INSERT INTO balance_changes(poolid, coin, address, amount, usage, tags, created) "
+	query := "INSERT INTO balance_changes(poolid, chain, address, amount, usage, tags, created) "
 	query = query + "VALUES($1, $2, $3, $4, $5, $6, $7)"
 
 	stmt, err := r.DB.Prepare(query)
@@ -38,19 +39,19 @@ func (r *BalanceRepository) AddAmount(poolID, coin, address, usage string, amoun
 		return err
 	}
 
-	_, err = stmt.Exec(poolID, coin, address, amount, usage, "", now)
+	_, err = stmt.Exec(poolID, chain, address, amount, usage, "", now)
 	if err != nil {
 		return err
 	}
 
-	balance, err := r.GetBalance(poolID, coin, address)
+	balance, err := r.GetBalance(poolID, chain, address)
 	if err != nil {
 		return err
 	}
 
 	balanceRecord := Balance{
 		PoolID:  poolID,
-		Coin:    coin,
+		Chain:   chain,
 		Address: address,
 		Created: now,
 		Updated: now,
@@ -64,41 +65,41 @@ func (r *BalanceRepository) AddAmount(poolID, coin, address, usage string, amoun
 }
 
 func (r *BalanceRepository) Insert(balance Balance) error {
-	query := "INSERT INTO balances(poolid, address, amount, created, updated) "
-	query = query + "VALUES($1, $2, $3, $4, $5)"
+	query := "INSERT INTO balances(poolid, chain, address, amount, created, updated) "
+	query = query + "VALUES($1, $2, $3, $4, $5, $6)"
 
 	stmt, err := r.DB.Prepare(query)
 	if err != nil {
 		return err
 	}
 
-	_, err = stmt.Exec(balance.PoolID, balance.Address, balance.Amount,
+	_, err = stmt.Exec(balance.PoolID, balance.Chain, balance.Address, balance.Amount,
 		balance.Created, balance.Updated)
 	return err
 }
 
 func (r *BalanceRepository) Update(balance Balance) error {
 	query := "UPDATE balances SET amount = amount + $1, updated = now() at time zone 'utc' "
-	query = query + "WHERE poolid = $2 AND coin = $3 AND address = $4"
+	query = query + "WHERE poolid = $2 AND chain = $3 AND address = $4"
 
 	stmt, err := r.DB.Prepare(query)
 	if err != nil {
 		return err
 	}
 
-	_, err = stmt.Exec(balance.Amount, balance.PoolID, balance.Coin, balance.Address)
+	_, err = stmt.Exec(balance.Amount, balance.PoolID, balance.Chain, balance.Address)
 	return err
 }
 
-func (r *BalanceRepository) GetBalance(poolID, coin, address string) (*float32, error) {
-	query := "SELECT amount FROM balances WHERE poolid = $1 AND coin = $2 AND address = $3"
+func (r *BalanceRepository) GetBalance(poolID, chain, address string) (*float32, error) {
+	query := "SELECT amount FROM balances WHERE poolid = $1 AND chain = $2 AND address = $3"
 
 	stmt, err := r.DB.Prepare(query)
 	if err != nil {
 		return nil, err
 	}
 
-	row := stmt.QueryRow(poolID, coin, address)
+	row := stmt.QueryRow(poolID, chain, address)
 	if row == nil {
 		return nil, nil
 	}
@@ -113,7 +114,7 @@ func (r *BalanceRepository) GetBalance(poolID, coin, address string) (*float32, 
 }
 
 func (r *BalanceRepository) GetPoolBalancesOverThreshold(poolID string, minimum float32) ([]Balance, error) {
-	query := "SELECT b.poolid, b.address, b.created, b.updated "
+	query := "SELECT b.poolid, b.chain, b.address, b.created, b.updated "
 	query = query + "FROM balances b "
 	query = query + "LEFT JOIN miner_settings ms ON ms.poolid = b.poolid AND ms.address = b.address "
 	query = query + "WHERE b.poolid = $1 AND b.amount >= COALESCE(ms.paymentthreshold, $2)"
@@ -132,7 +133,7 @@ func (r *BalanceRepository) GetPoolBalancesOverThreshold(poolID string, minimum 
 	for rows.Next() {
 		var balance Balance
 
-		err = rows.Scan(&balance)
+		err = rows.Scan(&balance.PoolID, &balance.Chain, &balance.Address, &balance.Created, &balance.Updated)
 		if err != nil {
 			return nil, err
 		}

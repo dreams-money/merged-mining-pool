@@ -42,6 +42,10 @@ type sqlConfig struct {
 	SSLMode  string `json:"sslmode"`
 }
 
+type apiConfig struct {
+	Port string `json:"port"`
+}
+
 type Config struct {
 	PoolName           string                   `json:"pool_name"`
 	BlockSignature     string                   `json:"block_signature"`
@@ -53,6 +57,7 @@ type Config struct {
 	BlockChainOrder    `json:"merged_blockchain_order"`
 	ShareFlushInterval string    `json:"share_flush_interval"`
 	Persister          sqlConfig `json:"persistence"`
+	API                apiConfig `json:"api"`
 }
 
 func LoadConfig(fileName string) *Config {

@@ -26,9 +26,9 @@ func main() {
 	}
 
 	startPoolServer(configuration)
+	startStatManager(configuration)
 	startAPIServer(configuration)
 	// startPayoutService(configuration *config.Config)
-
 	startStatsService(configuration)
 
 	// blocker := make(chan struct{})
@@ -43,12 +43,20 @@ func parseCommandLineOptions() string {
 func startPoolServer(configuration *config.Config) {
 	poolServer := pool.NewServer(configuration)
 	go poolServer.Start()
-	log.Println("Started Pool")
+	log.Println("Started Pool on port: " + configuration.Port)
 }
 
 func startAPIServer(configuration *config.Config) {
-	go api.ListenAndServe()
-	log.Println("Started API")
+	go api.ListenAndServe(configuration)
+	log.Println("Started API on port: " + configuration.API.Port)
+}
+
+func startStatManager(configuration *config.Config) {
+	// TODO take out intervals to config
+	hashrateWindow := time.Duration(10)
+	statsRecordInterval := time.Duration(15)
+	go persistence.UpdateStatsOnInterval(configuration.PoolName, time.Minute*hashrateWindow, time.Second*statsRecordInterval)
+	log.Printf("Stat Manager running every %v seconds with a hashrate window of %v minutes\n", statsRecordInterval, hashrateWindow)
 }
 
 func startStatsService(configuration *config.Config) {

@@ -59,5 +59,8 @@
         "password": "bXVxE8Aye7hHz9dSdscfTfZGJXMr9TWQ",
         "database": "miningcore",
         "sslmode": "disable"
+    },
+    "api": {
+        "port": "8001"
     }
 }

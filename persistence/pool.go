@@ -18,7 +18,7 @@ type PoolStat struct {
 	LastNetworkBlockTime time.Time
 	BlockHeight          uint
 	ConnectedPeers       uint
-	SharesPerSecond      uint
+	SharesPerSecond      float64
 	Created              time.Time
 }
 
@@ -126,6 +126,24 @@ func (r *PoolRepository) PoolPerformanceBetween(poolID string, start, end time.T
 }
 
 type MinerWorkerHashrates map[string]map[string]float64 // miner => worker => hashrate
+
+func (results *MinerWorkerHashrates) GroupByMiner() map[string][]float64 {
+	miners := make(map[string][]float64)
+	for miner, workers := range *results {
+		hashrates, exists := miners[miner]
+		if !exists {
+			var rates []float64
+			hashrates = rates
+		}
+		for _, worker := range workers {
+			hashrates = append(hashrates, worker)
+		}
+
+		miners[miner] = hashrates
+	}
+
+	return miners
+}
 
 func (r *PoolRepository) MinerWorkerHashrates(poolID string) (MinerWorkerHashrates, error) {
 	minerWorkerHashrates := make(MinerWorkerHashrates)
