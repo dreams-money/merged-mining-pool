@@ -40,3 +40,14 @@ Once you have it running, your client can connect with the following login:
 
   - username: youPrimaryCoinMinerAddress-yourAux1CoinMinerAddress.rigID
   - password: none
+
+Contributing
+------------
+
+I hope to have created a system in which multiple chains can be supported from one project.  As such, most coin's can be merged mined from this same project.
+
+Centered around type Generator interface{} (and a future type RPC interface{}) any coin, in any coin family, can be supported as a go module or a microservice.
+
+Feel free to contact me via [Github Discussions](https://github.com/dreams-money/merged-mining-pool/discussions) to discuss how you can implement your chain.
+
+New features may be discussed, but are generally based around Stratum and chain updates.
