@@ -19,8 +19,6 @@ func (pool *PoolServer) flushShareBufferAtInterval(interval time.Duration) {
 	for {
 		time.Sleep(interval)
 
-		log.Println("Flushing share buffer")
-
 		pool.Lock()
 		sharesToWrite := pool.shareBuffer
 		pool.shareBuffer = nil

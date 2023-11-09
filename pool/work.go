@@ -29,7 +29,7 @@ func (p *PoolServer) fetchRpcBlockTemplatesAndCacheWork() error {
 	}
 
 	primaryName := p.config.GetPrimary()
-	rewardPubScriptKey := p.activeNodes[primaryName].RewardPubScriptKey
+	rewardPubScriptKey := p.GetPrimaryNode().RewardPubScriptKey
 	extranonceByteReservationLength := 8
 
 	block, p.workCache, err = bitcoin.GenerateWork(&template, auxblock,
@@ -99,10 +99,7 @@ func (p *PoolServer) recieveWorkFromClient(share bitcoin.Work, client *stratumCl
 	log.Println(m)
 
 	blockTarget := bitcoin.Target(primaryBlockTemplate.Template.Target)
-	blockDifficulty, accuracy := blockTarget.ToDifficulty()
-	if accuracy != 0 {
-		log.Println("primary block target to diff conversion accuracy not exact")
-	}
+	blockDifficulty, _ := blockTarget.ToDifficulty()
 	blockDifficulty = blockDifficulty * primaryBlockTemplate.ShareMultiplier()
 
 	p.Lock()
@@ -150,10 +147,7 @@ func (p *PoolServer) recieveWorkFromClient(share bitcoin.Work, client *stratumCl
 		} else {
 			// EnrichShare
 			aux1Target := bitcoin.Target(reverseHexBytes(auxBlock.Target))
-			aux1Difficulty, accuracy := aux1Target.ToDifficulty()
-			if accuracy != 0 {
-				log.Println("aux block target to diff conversion accuracy not exact")
-			}
+			aux1Difficulty, _ := aux1Target.ToDifficulty()
 			aux1Difficulty = aux1Difficulty / bitcoin.GetChain(aux1Name).ShareMultiplier()
 
 			found.Chain = aux1Name

@@ -53,7 +53,7 @@ func (r *PoolRepository) GetLastStat(poolID string) (PoolStat, error) {
 		return stat, err
 	}
 
-	err = stmt.QueryRow(poolID).Scan(&stat.PoolID, &stat.ConnectedMiners, &stat.ConnectedPeers, &stat.PoolHashrate,
+	err = stmt.QueryRow(poolID).Scan(&stat.PoolID, &stat.ConnectedMiners, &stat.ConnectedWorkers, &stat.PoolHashrate,
 		&stat.SharesPerSecond, &stat.NetworkHashrate, &stat.NetworkDifficulty, &stat.LastNetworkBlockTime,
 		&stat.BlockHeight, &stat.ConnectedPeers, &stat.Created)
 

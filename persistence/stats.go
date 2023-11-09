@@ -35,22 +35,12 @@ func insertManyNewMinerStatsAndOnePoolStat(poolID string, hashRateCalculationWin
 		log.Println(err)
 	}
 
-	// Connect miner address back to rigID
-
 	makeMinerStats(poolID, miners, now, timeFrom, hashRateCalculationWindow)
-
-	// Do Orphans
-
-	// previousMinerWorkerHashrates, err := Pool.MinerWorkerHashrates(poolID)
-	// if err != nil {
-	// 	return err
-	// }
-	// // Get "non zeros"
 
 	return nil
 }
 
-func makeNewPoolStat(poolID string, hashRateCalculationWindow time.Duration, workers MinerWorkerHashSummaryResultSet, minerCount uint, now time.Time) error {
+func makeNewPoolStat(poolID string, hashRateCalculationWindow time.Duration, workers MinerWorkerHashAccumulationResultSet, minerCount uint, now time.Time) error {
 	poolStat := PoolStat{
 		PoolID:  poolID,
 		Created: now,
@@ -60,6 +50,7 @@ func makeNewPoolStat(poolID string, hashRateCalculationWindow time.Duration, wor
 		poolStat.ConnectedMiners = minerCount
 		poolStat.ConnectedWorkers = uint(len(workers))
 		poolStat.PoolHashrate, poolStat.SharesPerSecond = getHashrateAndSharesPerSecond(workers, hashRateCalculationWindow)
+		poolStat.PoolHashrate, poolStat.SharesPerSecond = math.Floor(poolStat.PoolHashrate), roundToThreeDigits(poolStat.SharesPerSecond)
 	} else {
 		poolStat.ConnectedMiners, poolStat.ConnectedWorkers, poolStat.PoolHashrate, poolStat.SharesPerSecond = 0, 0, 0, 0
 	}
@@ -67,7 +58,7 @@ func makeNewPoolStat(poolID string, hashRateCalculationWindow time.Duration, wor
 	return Pool.InsertPoolStat(poolStat)
 }
 
-func makeMinerStats(poolID string, miners map[string][]MinerWorkerHashSummary, now, timeFrom time.Time, hashRateCalculationWindow time.Duration) int {
+func makeMinerStats(poolID string, miners map[string][]MinerWorkerHashAccumulation, now, timeFrom time.Time, hashRateCalculationWindow time.Duration) int {
 	minerStat := MinerStat{
 		PoolID:  poolID,
 		Created: now,
@@ -75,32 +66,18 @@ func makeMinerStats(poolID string, miners map[string][]MinerWorkerHashSummary, n
 	var err error
 	var successCount int
 	for miner, workers := range miners {
-		window := getStatsCalcWindows(now, timeFrom, hashRateCalculationWindow, workers)
+		differences := getWindowDifferences(now, timeFrom, hashRateCalculationWindow, workers)
 
 		// Adjust hash window if it's not full
-		minerHashTimeFrame := hashRateCalculationWindow
-		if window.timeFrameBeforeFirstShare >= (hashRateCalculationWindow / 10) {
-			minerHashTimeFrame = hashRateCalculationWindow - window.timeFrameBeforeFirstShare
-		}
-		if window.timeFrameAfterLastShare >= (hashRateCalculationWindow / 10) {
-			minerHashTimeFrame = hashRateCalculationWindow + window.timeFrameAfterLastShare
-		}
-		if (window.timeFrameBeforeFirstShare >= (hashRateCalculationWindow / 10)) && (window.timeFrameAfterLastShare >= (hashRateCalculationWindow / 10)) {
-			minerHashTimeFrame = hashRateCalculationWindow - window.timeFrameBeforeFirstShare + window.timeFrameAfterLastShare
-		}
+		adjustedWindow := adjustHashWindow(differences, hashRateCalculationWindow)
 
-		if minerHashTimeFrame < 1 {
-			minerHashTimeFrame = 1
-		}
-
-		roundToThreeDigits := func(x float64) float64 {
-			return math.Round(x*1000) / 1000
-		}
 		for _, worker := range workers {
 			minerStat.Miner = miner
 			minerStat.Worker = worker.Worker
-			minerStat.Hashrate = hashrateFromShares(worker.Difficulty, minerHashTimeFrame)
-			minerStat.SharesPerSecond = roundToThreeDigits(float64(time.Duration(worker.ShareCount) / minerHashTimeFrame))
+			minerStat.Hashrate = math.Floor(hashrateFromShares(worker.SumDifficulty, adjustedWindow))
+
+			sharesPerSecond := float64(worker.ShareCount) / adjustedWindow
+			minerStat.SharesPerSecond = roundToThreeDigits(sharesPerSecond)
 
 			err = Miners.InsertMinerWorkerPerformanceStats(minerStat)
 			if err != nil {
@@ -114,23 +91,45 @@ func makeMinerStats(poolID string, miners map[string][]MinerWorkerHashSummary, n
 	return successCount
 }
 
-func getHashrateAndSharesPerSecond(hashSummaries MinerWorkerHashSummaryResultSet, hashRateCalculationWindow time.Duration) (float64, float64) {
+func adjustHashWindow(window StatsCalcWindow, hashRateCalculationWindow time.Duration) float64 {
+	minerHashTimeFrame := hashRateCalculationWindow.Seconds()
+	statsStartedAfterHashrateWindow := window.startDifference.Seconds() >= (hashRateCalculationWindow.Seconds() * 0.1)
+	statsEndedBeforeHashrateWindow := window.endDifference.Seconds() >= (hashRateCalculationWindow.Seconds() * 0.1)
+
+	if statsStartedAfterHashrateWindow && statsEndedBeforeHashrateWindow {
+		minerHashTimeFrame = hashRateCalculationWindow.Seconds() - window.startDifference.Seconds() + window.endDifference.Seconds()
+	} else if statsStartedAfterHashrateWindow {
+		minerHashTimeFrame = hashRateCalculationWindow.Seconds() - window.startDifference.Seconds()
+	} else if statsEndedBeforeHashrateWindow {
+		minerHashTimeFrame = hashRateCalculationWindow.Seconds() + window.endDifference.Seconds()
+	}
+
+	minerHashTimeFrame = math.Floor(minerHashTimeFrame)
+
+	if minerHashTimeFrame < 1 {
+		minerHashTimeFrame = 1
+	}
+
+	return minerHashTimeFrame
+}
+
+func getHashrateAndSharesPerSecond(hashSummaries MinerWorkerHashAccumulationResultSet, hashRateCalculationWindow time.Duration) (float64, float64) {
 	sumShares, sharesPerSecond := float64(0), float64(0)
 	for _, summary := range hashSummaries {
-		sumShares += summary.Difficulty
+		sumShares += summary.SumDifficulty
 		sharesPerSecond += float64(summary.ShareCount)
 	}
-	hashRate := hashrateFromShares(sumShares, hashRateCalculationWindow)
+	hashRate := hashrateFromShares(sumShares, hashRateCalculationWindow.Seconds())
+
 	return math.Floor(hashRate), sharesPerSecond / float64(hashRateCalculationWindow)
 }
 
 type StatsCalcWindow struct {
-	timeFrameBeforeFirstShare time.Duration
-	timeFrameAfterLastShare   time.Duration
-	timeFrameFirstLastShare   time.Duration
+	startDifference time.Duration
+	endDifference   time.Duration
 }
 
-func getStatsCalcWindows(now, timeFrom time.Time, hashRateCalculationWindow time.Duration, workers []MinerWorkerHashSummary) StatsCalcWindow {
+func getWindowDifferences(now, timeFrom time.Time, hashRateCalculationWindow time.Duration, workers []MinerWorkerHashAccumulation) StatsCalcWindow {
 	var first, last time.Time
 	first = workers[0].FirstShare
 	for _, worker := range workers {
@@ -138,24 +137,27 @@ func getStatsCalcWindows(now, timeFrom time.Time, hashRateCalculationWindow time
 			first = worker.FirstShare
 		}
 		if last.Before(worker.LastShare) {
-			last = worker.FirstShare
+			last = worker.LastShare
 		}
 	}
 
 	window := StatsCalcWindow{
-		timeFrameBeforeFirstShare: first.Sub(timeFrom),
-		timeFrameAfterLastShare:   now.Sub(last),
+		startDifference: first.Sub(timeFrom),
+		endDifference:   now.Sub(last),
 	}
-	window.timeFrameFirstLastShare = hashRateCalculationWindow - window.timeFrameBeforeFirstShare - window.timeFrameAfterLastShare
 
 	return window
 }
 
-func hashrateFromShares(shareSum float64, interval time.Duration) float64 {
+func hashrateFromShares(shareSum, interval float64) float64 {
+	// TODO move to coin package
 	bitcoinConstantMultiplier := math.Pow(2, 32)
-	hashrate := shareSum * bitcoinConstantMultiplier / interval.Seconds()
+	hashrate := shareSum * bitcoinConstantMultiplier / interval
 
-	// Possible "hashrate multiplier" depending on coin
 	return hashrate
 
+}
+
+func roundToThreeDigits(x float64) float64 {
+	return math.Round(x*1000) / 1000
 }

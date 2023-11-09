@@ -2,6 +2,7 @@ package persistence
 
 import (
 	"database/sql"
+	"strings"
 	"time"
 )
 
@@ -72,18 +73,21 @@ func (r *FoundRepository) Delete(block Found) error {
 	return err
 }
 
-func (r *FoundRepository) PageBlocks(poolID, blockStatus string, page, pageSize int) ([]Found, error) {
-	query := "SELECT poolid, blockheight, networkdifficulty, status, type, confirmationprogress, "
-	query = query + "effort, transactionconfirmationdata, miner, reward, source, hash, created "
-	query = query + "FROM blocks WHERE poolid = $1 AND status = ANY($2) "
-	query = query + "ORDER BY created DESC OFFSET $3 FETCH NEXT $4 ROWS ONLY"
+func (r *FoundRepository) PageBlocks(poolID string, blockStatus []string, page, pageSize int) ([]Found, error) {
+	query := `SELECT poolid, blockheight, networkdifficulty, status, type, confirmationprogress,
+	          effort, transactionconfirmationdata, miner, reward, source, hash, created
+			  FROM blocks WHERE poolid = $1 AND status = ANY($2)
+			  ORDER BY created DESC OFFSET $3 FETCH NEXT $4 ROWS ONLY`
 
 	stmt, err := r.DB.Prepare(query)
 	if err != nil {
 		return nil, err
 	}
 
-	rows, err := stmt.Query(poolID, blockStatus, page, pageSize)
+	statusString := strings.Join(blockStatus, "},{")
+	statusString = "{" + statusString + "}"
+
+	rows, err := stmt.Query(poolID, statusString, page, pageSize)
 	if err != nil {
 		return nil, err
 	}

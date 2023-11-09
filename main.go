@@ -53,10 +53,10 @@ func startAPIServer(configuration *config.Config) {
 
 func startStatManager(configuration *config.Config) {
 	// TODO take out intervals to config
-	hashrateWindow := time.Duration(10)
-	statsRecordInterval := time.Duration(15)
-	go persistence.UpdateStatsOnInterval(configuration.PoolName, time.Minute*hashrateWindow, time.Second*statsRecordInterval)
-	log.Printf("Stat Manager running every %v seconds with a hashrate window of %v minutes\n", statsRecordInterval, hashrateWindow)
+	hashrateWindow := time.Minute * time.Duration(10)
+	statsRecordInterval := time.Minute * time.Duration(2)
+	go persistence.UpdateStatsOnInterval(configuration.PoolName, hashrateWindow, statsRecordInterval)
+	log.Printf("Stat Manager running every %v with a hashrate window of %v\n", statsRecordInterval, hashrateWindow)
 }
 
 func startStatsService(configuration *config.Config) {

@@ -70,8 +70,8 @@ func (p *PoolServer) fetchAllBlockTemplatesFromRPC() (bitcoin.Template, *bitcoin
 	var auxBlock bitcoin.AuxBlock
 	var err error
 
-	primaryNode := p.activeNodes[p.config.GetPrimary()]
-	aux1Node := p.activeNodes[p.config.GetAux1()]
+	primaryNode := p.GetPrimaryNode()
+	aux1Node := p.GetAux1Node()
 
 	template, err = primaryNode.RPC.GetBlockTemplate()
 	if err != nil {

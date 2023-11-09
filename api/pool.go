@@ -11,7 +11,7 @@ func getPoolIndex(poolID string) map[string]any {
 	logOnError(err)
 
 	return map[string]any{
-		"PoolHashRate":  stat.PoolHashrate,
+		"PoolHashRate":  floatToHashrate(stat.PoolHashrate),
 		"ActiveMiners":  stat.ConnectedMiners,
 		"Workers":       stat.ConnectedWorkers,
 		"BlocksPerHour": blocksPerHour(poolID),
@@ -26,7 +26,7 @@ func blocksPerHour(poolID string) uint {
 }
 
 func recentBlocks(poolId string) []persistence.Found {
-	found, err := persistence.Blocks.PageBlocks(poolId, persistence.StatusConfirmed, 0, 100)
+	found, err := persistence.Blocks.PageBlocks(poolId, []string{persistence.StatusConfirmed}, 0, 100)
 	logOnError(err)
 	return found
 }

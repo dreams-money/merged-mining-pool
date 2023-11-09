@@ -203,33 +203,33 @@ func (r *ShareRepository) GetEffectiveAccumulatedShareDifficultyBetween(poolID s
 	return difficulty, nil
 }
 
-type MinerWorkerHashSummary struct {
-	Miner      string
-	Worker     string
-	Difficulty float64
-	ShareCount uint
-	FirstShare time.Time
-	LastShare  time.Time
+type MinerWorkerHashAccumulation struct {
+	Miner         string
+	Worker        string
+	SumDifficulty float64
+	ShareCount    uint
+	FirstShare    time.Time
+	LastShare     time.Time
 }
 
-type MinerWorkerHashSummaryResultSet []MinerWorkerHashSummary
+type MinerWorkerHashAccumulationResultSet []MinerWorkerHashAccumulation
 
-func (results *MinerWorkerHashSummaryResultSet) GroupByMiner() map[string][]MinerWorkerHashSummary {
-	miners := make(map[string][]MinerWorkerHashSummary)
+func (results *MinerWorkerHashAccumulationResultSet) GroupByMiner() map[string][]MinerWorkerHashAccumulation {
+	miners := make(map[string][]MinerWorkerHashAccumulation)
 	for _, summary := range *results {
 		miner, exists := miners[summary.Miner]
 		if !exists {
-			var collection []MinerWorkerHashSummary
+			var collection []MinerWorkerHashAccumulation
 			miner = collection
 		}
 
-		miner = append(miner, MinerWorkerHashSummary{
-			Miner:      summary.Miner,
-			Worker:     summary.Worker,
-			Difficulty: summary.Difficulty,
-			ShareCount: summary.ShareCount,
-			FirstShare: summary.FirstShare,
-			LastShare:  summary.LastShare,
+		miner = append(miner, MinerWorkerHashAccumulation{
+			Miner:         summary.Miner,
+			Worker:        summary.Worker,
+			SumDifficulty: summary.SumDifficulty,
+			ShareCount:    summary.ShareCount,
+			FirstShare:    summary.FirstShare,
+			LastShare:     summary.LastShare,
 		})
 
 		miners[summary.Miner] = miner
@@ -238,7 +238,7 @@ func (results *MinerWorkerHashSummaryResultSet) GroupByMiner() map[string][]Mine
 	return miners
 }
 
-func (r *ShareRepository) GetWorkerHashAccumulationBetween(poolID string, start, end time.Time) (MinerWorkerHashSummaryResultSet, error) {
+func (r *ShareRepository) GetWorkerHashAccumulationBetween(poolID string, start, end time.Time) (MinerWorkerHashAccumulationResultSet, error) {
 
 	query := "SELECT SUM(difficulty), COUNT(difficulty), MIN(created) AS firstshare, MAX(created) AS lastshare, miner, worker "
 	query = query + "FROM shares WHERE poolid = $1 AND created >= $2 AND created <= $3 GROUP BY miner, worker"
@@ -256,10 +256,10 @@ func (r *ShareRepository) GetWorkerHashAccumulationBetween(poolID string, start,
 		return nil, nil
 	}
 
-	var workers []MinerWorkerHashSummary
+	var workers []MinerWorkerHashAccumulation
 	for rows.Next() {
-		var worker MinerWorkerHashSummary
-		err = rows.Scan(&worker.Difficulty, &worker.ShareCount, &worker.FirstShare,
+		var worker MinerWorkerHashAccumulation
+		err = rows.Scan(&worker.SumDifficulty, &worker.ShareCount, &worker.FirstShare,
 			&worker.LastShare, &worker.Miner, &worker.Worker)
 		if err != nil {
 			return workers, err

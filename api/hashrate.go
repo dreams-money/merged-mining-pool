@@ -29,5 +29,7 @@ func floatToHashrate(hashrate float64) HashRate {
 
 	hashRateObject.Rate = fmt.Sprintf("%.2f", reducedAmount)
 	hashRateObject.Denomination = sizes[int(thousanth)] + "/s"
+	hashRateObject.Raw = hashrate
+
 	return hashRateObject
 }

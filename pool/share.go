@@ -25,11 +25,8 @@ func validateAndWeighShare(primary *bitcoin.BitcoinBlock, aux1 *bitcoin.AuxBlock
 	primaryTarget := bitcoin.Target(primary.Template.Target)
 	primaryTargetBig, _ := primaryTarget.ToBig()
 
-	// TODO - We should probably abstract this to the bitcoin/chain package. I.e. chain.getDifficulty()
-	primaryHash := primarySum.Text(16)
-	primaryHashHit := bitcoin.Target(primaryHash)
-	shareDifficulty, _ := primaryHashHit.ToDifficulty()
-	shareDifficulty = shareDifficulty * primary.ShareMultiplier()
+	poolTarget, _ := bitcoin.TargetFromDifficulty(poolDifficulty / primary.ShareMultiplier())
+	shareDifficulty, _ := poolTarget.ToDifficulty()
 
 	status := shareInvalid
 
@@ -54,9 +51,7 @@ func validateAndWeighShare(primary *bitcoin.BitcoinBlock, aux1 *bitcoin.AuxBlock
 		return status, shareDifficulty
 	}
 
-	poolTarget, _ := bitcoin.TargetFromDifficulty(poolDifficulty / primary.ShareMultiplier())
 	poolTargettBig, _ := poolTarget.ToBig()
-
 	if primarySum.Cmp(poolTargettBig) <= 0 {
 		return shareValid, shareDifficulty
 	}
