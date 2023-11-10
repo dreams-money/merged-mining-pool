@@ -11,12 +11,12 @@ Features
   - Subscribes to block notifications from blockchain daemon
   - Unique extranonce generation
   - Merged mining
+  - API service
 
 Todo
 ----
   - Single coin mining
   - RPC failover
-  - API service
   - Payouts service
   - Variable difficulty
 
@@ -38,7 +38,7 @@ Connecting to the pool
 
 Once you have it running, your client can connect with the following login:
 
-  - username: youPrimaryCoinMinerAddress-yourAux1CoinMinerAddress.rigID
+  - username: yourPrimaryCoinMinerAddress-yourAux1CoinMinerAddress.rigID
   - password: none
 
 Contributing

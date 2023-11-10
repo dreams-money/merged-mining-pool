@@ -148,7 +148,7 @@ func (p *PoolServer) recieveWorkFromClient(share bitcoin.Work, client *stratumCl
 			// EnrichShare
 			aux1Target := bitcoin.Target(reverseHexBytes(auxBlock.Target))
 			aux1Difficulty, _ := aux1Target.ToDifficulty()
-			aux1Difficulty = aux1Difficulty / bitcoin.GetChain(aux1Name).ShareMultiplier()
+			aux1Difficulty = aux1Difficulty * bitcoin.GetChain(aux1Name).ShareMultiplier()
 
 			found.Chain = aux1Name
 			found.Created = time.Now()

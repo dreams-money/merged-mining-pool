@@ -130,6 +130,7 @@ type StatsCalcWindow struct {
 }
 
 func getWindowDifferences(now, timeFrom time.Time, hashRateCalculationWindow time.Duration, workers []MinerWorkerHashAccumulation) StatsCalcWindow {
+	// See README.md for illustration
 	var first, last time.Time
 	first = workers[0].FirstShare
 	for _, worker := range workers {
@@ -155,7 +156,6 @@ func hashrateFromShares(shareSum, interval float64) float64 {
 	hashrate := shareSum * bitcoinConstantMultiplier / interval
 
 	return hashrate
-
 }
 
 func roundToThreeDigits(x float64) float64 {

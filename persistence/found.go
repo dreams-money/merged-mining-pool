@@ -38,6 +38,8 @@ func (r *FoundRepository) Insert(block Found) error {
 	query := `INSERT INTO blocks(poolid, chain, blockheight, networkdifficulty, status, "type", transactionconfirmationdata, miner, reward, effort, confirmationprogress, source, hash, created)
 	VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`
 
+	block.NetworkDifficulty = roundToThreeDigits(block.NetworkDifficulty)
+
 	_, err := r.DB.Exec(query, &block.PoolID, &block.Chain, &block.BlockHeight, &block.NetworkDifficulty,
 		&block.Status, &block.Type, &block.TransactionConfirmationData, &block.Miner,
 		&block.Reward, &block.Effort, &block.ConfirmationProgress, &block.Source, &block.Hash, &block.Created)
