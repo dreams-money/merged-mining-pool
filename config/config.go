@@ -56,8 +56,11 @@ type Config struct {
 	PoolDifficulty     float64                  `json:"pool_difficulty"`
 	BlockChainOrder    `json:"merged_blockchain_order"`
 	ShareFlushInterval string    `json:"share_flush_interval"`
+	HashrateWindow     string    `json:"hashrate_window"`
+	PoolStatsInterval  string    `json:"pool_stats_interval"`
 	Persister          sqlConfig `json:"persistence"`
 	API                apiConfig `json:"api"`
+	AppStatsInterval   string    `json:"app_stats_interval"`
 }
 
 func LoadConfig(fileName string) *Config {

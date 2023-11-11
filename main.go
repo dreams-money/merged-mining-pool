@@ -28,8 +28,8 @@ func main() {
 	startPoolServer(configuration)
 	startStatManager(configuration)
 	startAPIServer(configuration)
-	// startPayoutService(configuration *config.Config)
 	startStatsService(configuration)
+	// startPayoutService(configuration *config.Config)
 
 	// blocker := make(chan struct{})
 	// <-blocker
@@ -52,14 +52,18 @@ func startAPIServer(configuration *config.Config) {
 }
 
 func startStatManager(configuration *config.Config) {
-	// TODO take out intervals to config
-	hashrateWindow := time.Minute * time.Duration(10)
-	statsRecordInterval := time.Minute * time.Duration(2)
+	hashrateWindow := mustParseDuration(configuration.HashrateWindow)
+	statsRecordInterval := mustParseDuration(configuration.PoolStatsInterval)
 	go persistence.UpdateStatsOnInterval(configuration.PoolName, hashrateWindow, statsRecordInterval)
 	log.Printf("Stat Manager running every %v with a hashrate window of %v\n", statsRecordInterval, hashrateWindow)
 }
 
+func startPayoutService(configuration *config.Config) {
+
+}
+
 func startStatsService(configuration *config.Config) {
+	interval := mustParseDuration(configuration.AppStatsInterval)
 	for {
 		var memStats runtime.MemStats
 		runtime.ReadMemStats(&memStats)
@@ -69,10 +73,14 @@ func startStatsService(configuration *config.Config) {
 		log.Printf("Total System Memory: %v", memStats.Sys)
 		log.Printf("Total Memory Allocated: %v", memStats.TotalAlloc)
 		fmt.Println("STATS END")
-		time.Sleep(time.Second * 10)
+		time.Sleep(interval)
 	}
 }
 
-func startPayoutService(configuration *config.Config) {
-
+func mustParseDuration(s string) time.Duration {
+	value, err := time.ParseDuration(s)
+	if err != nil {
+		panic("util: Can't parse duration `" + s + "`: " + err.Error())
+	}
+	return value
 }
