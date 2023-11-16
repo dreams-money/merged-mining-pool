@@ -23,9 +23,9 @@ func (Litecoin) ShareMultiplier() float64 {
 }
 
 func (Litecoin) ValidMainnetAddress(address string) bool {
-	return regexp.MustCompile("^[a-z0-9]{44}$").MatchString(address)
+	return regexp.MustCompile("^(L|M)[A-Za-z0-9]{33}$|^(ltc1)[0-9A-Za-z]{39}$").MatchString(address)
 }
 
-func (d Litecoin) ValidTestnetAddress(address string) bool {
+func (Litecoin) ValidTestnetAddress(address string) bool {
 	return regexp.MustCompile("[a-z0-9]{44}").MatchString(address)
 }
