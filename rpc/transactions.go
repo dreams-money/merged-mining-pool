@@ -5,6 +5,63 @@ import (
 	"time"
 )
 
+type TransactionDetails struct {
+	Address  string  `json:"address"`
+	Category string  `json:"category"`
+	Amount   float32 `json:"amount"`
+}
+
+type Transaction struct {
+	TransactionID   string               `json:"txid"`
+	Amount          float32              `json:"amount"`
+	Confirmations   uint                 `json:"confirmations"`
+	Blockhash       string               `json:"blockhash"`
+	Blockheight     uint                 `json:"blockheight"`
+	BlockTime       int64                `json:"blocktime"`
+	TransactionTime int64                `json:"time"`
+	RecievedTime    int64                `json:"recievedtime"`
+	Details         []TransactionDetails `json:"details"`
+}
+
+func (r *RPCClient) GetTransaction(transactionID string) (Transaction, error) {
+	params := make([]any, 1)
+	params[0] = transactionID
+
+	transaction := Transaction{}
+
+	resp, status, err := r.doRequest("gettransaction", params)
+	if err != nil {
+		return transaction, err
+	}
+	if status != 200 {
+		return transaction, handleHttpError(resp, status)
+	}
+
+	err = json.Unmarshal(resp.Result, &transaction)
+
+	return transaction, err
+}
+
+func (r *RPCClient) SendMany(transactions map[string]float32, from string) (string, error) {
+	params := make([]any, 2)
+	params[0] = from
+	params[1] = transactions
+
+	transactionID := ""
+
+	response, status, err := r.doRequest("sendmany", params)
+	if err != nil {
+		return transactionID, err
+	}
+	if status != 200 {
+		return transactionID, handleHttpError(response, status)
+	}
+
+	err = json.Unmarshal(response.Result, &transactionID)
+
+	return transactionID, err
+}
+
 func (r *RPCClient) GetWalletBalance() (float64, error) {
 	resp, status, err := r.doRequest("getbalance", nil)
 	if err != nil {

@@ -8,20 +8,13 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
-
-	"designs.capital/dogepool/bitcoin"
 )
 
 type RPCClient struct {
-	sync.RWMutex
-	NodeUrl     string
-	Name        string
-	sick        bool
-	sickRate    int
-	successRate int
-	client      *http.Client
+	NodeUrl string
+	Name    string
+	client  *http.Client
 }
 
 func NewRPCClient(name, rpcURL, rpcUser, rpcPassword, timeout string) *RPCClient {
@@ -86,7 +79,6 @@ func (r *RPCClient) doRequest(method string, params []interface{}) (rpcResponse,
 
 	resp, err := r.client.Do(req)
 	if err != nil {
-		r.markSick()
 		return rpcResp, 0, err
 	}
 	defer resp.Body.Close()
@@ -112,9 +104,7 @@ func (r *RPCClient) GetPeerCount() (int64, error) { // getconnectioncount
 	return n, nil
 }
 
-func (r *RPCClient) GetBlockTemplate() (bitcoin.Template, error) {
-	var blockTemplate bitcoin.Template
-
+func (r *RPCClient) GetBlockTemplate() (json.RawMessage, error) {
 	params := make([]interface{}, 1)
 	rules := make(map[string][]string)
 	rules["rules"] = make([]string, 2)
@@ -123,40 +113,28 @@ func (r *RPCClient) GetBlockTemplate() (bitcoin.Template, error) {
 	params[0] = rules
 	resp, status, err := r.doRequest("getblocktemplate", params)
 	if err != nil {
-		return blockTemplate, err
+		return json.RawMessage{}, err
 	}
 
 	if status != 200 {
-		return blockTemplate, handleHttpError(resp, status)
+		return json.RawMessage{}, handleHttpError(resp, status)
 	}
 
-	err = json.Unmarshal(resp.Result, &blockTemplate)
-	if err != nil {
-		return blockTemplate, err
-	}
-
-	return blockTemplate, nil
+	return resp.Result, nil
 }
 
-func (r *RPCClient) CreateAuxBlock(rewardAddress string) (bitcoin.AuxBlock, error) {
-	var block bitcoin.AuxBlock
-
+func (r *RPCClient) CreateAuxBlock(rewardAddress string) (json.RawMessage, error) {
 	params := make([]any, 1)
 	params[0] = rewardAddress
 	resp, status, err := r.doRequest("createauxblock", params)
 	if err != nil {
-		return block, err
+		return json.RawMessage{}, err
 	}
 	if status != 200 {
-		return block, handleHttpError(resp, status)
+		return json.RawMessage{}, handleHttpError(resp, status)
 	}
 
-	err = json.Unmarshal(resp.Result, &block)
-	if err != nil {
-		return block, err
-	}
-
-	return block, nil
+	return resp.Result, nil
 }
 
 type GetBlockReplyPart struct {

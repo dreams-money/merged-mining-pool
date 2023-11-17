@@ -8,14 +8,19 @@ Currently, only POSTGRES is supported, but any storage engine (or combination of
 Simply interface on the methods for each object, then factory out the connections with persister.go,
 
 ## Quick illustation of stats window adjustments
+Accurate hashrates are possibled with adjusted hashrate windows.
 
-                      A         B
-    timeFrom ->	    -              - <- now..
-    minStat  ->     |   -      -   | <- maxStat in HR window
-                    |   |______|   |
-    not considered  |     STAT     |  Not possible to reach
-                    |______________|
-                        HASHRATE
+    adjustedWindow = (if now)
 
-        A = startDifference
-        B = endDifference
+    A = startDifference
+    B = endDifference
+
+                       A          B
+                       |          |
+                       v          v
+    windowStart ->  -                - <- now..
+    minStat  -------|->  -      -  <-|--- maxStat
+                    |    |______|    |
+    <-not reachable |   STAT WINDOW  |  Not possible to reach -->
+                    |________________|
+                     HASHRATE WINDOW

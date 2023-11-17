@@ -11,14 +11,14 @@ import (
 	"github.com/go-zeromq/zmq4"
 )
 
-type blockChainNodesMap map[string]blockChainNode // "blockChainName" => activeNode
+type BlockChainNodesMap map[string]blockChainNode // "blockChainName" => activeNode
 
 type blockChainNode struct {
 	NotifyURL          string
 	RPC                *rpc.RPCClient
 	Network            string
 	RewardPubScriptKey string // TODO - this is very bitcoin specific.  Abstract to interface.
-	RewardAddress      string
+	RewardTo           string
 	NetworkDifficulty  float64
 }
 
@@ -33,28 +33,30 @@ func (p *PoolServer) GetAux1Node() blockChainNode {
 type hashblockCounterMap map[string]uint32 // "blockChainName" => hashblock msg counter
 
 func (pool *PoolServer) loadBlockchainNodes() {
-	pool.activeNodes = make(blockChainNodesMap)
+	pool.activeNodes = make(BlockChainNodesMap)
 	for _, blockChainName := range pool.config.BlockChainOrder {
-
-		node := pool.config.BlockchainNodes[blockChainName][0] // Always try to return to the primary node
-
-		// TODO - add node failover..
-
-		rpcClient := rpc.NewRPCClient(node.Name, node.RPC_URL, node.RPC_Username, node.RPC_Password, node.Timeout)
+		rpcManager, exists := pool.rpcManagers[blockChainName]
+		if !exists {
+			panic("Blockchain not found for: " + blockChainName)
+		}
+		rpcClient := rpcManager.GetActiveClient()
+		nodeConfig := pool.config.BlockchainNodes[blockChainName][rpcManager.GetIndex()]
 
 		chainInfo, err := rpcClient.GetBlockChainInfo()
 		logFatalOnError(err)
 
-		address, err := rpcClient.ValidateAddress(node.RewardAddress)
+		address, err := rpcClient.ValidateAddress(nodeConfig.RewardTo)
 		logFatalOnError(err)
+
+		// TODO this is wayy to bitcoin specific.  Move this to the coin package.
 		rewardPubScriptKey := address.ScriptPubKey
 
 		newNode := blockChainNode{
-			NotifyURL:          node.NotifyURL,
+			NotifyURL:          nodeConfig.NotifyURL,
 			RPC:                rpcClient,
 			Network:            chainInfo.Chain,
 			RewardPubScriptKey: rewardPubScriptKey,
-			RewardAddress:      node.RewardAddress,
+			RewardTo:           nodeConfig.RewardTo,
 			NetworkDifficulty:  chainInfo.NetworkDifficulty,
 		}
 		pool.activeNodes[blockChainName] = newNode
@@ -99,7 +101,7 @@ func (pool *PoolServer) listenForBlockNotifications() error {
 }
 
 // Ultimate program OUTPUT
-func (p *PoolServer) submitBlockToChain(block bitcoin.BitcoinBlock, work bitcoin.Work, chainName string) error {
+func (p *PoolServer) submitBlockToChain(block bitcoin.BitcoinBlock, work bitcoin.Work) error {
 	submission, err := block.Submit()
 	if err != nil {
 		return err
@@ -108,7 +110,7 @@ func (p *PoolServer) submitBlockToChain(block bitcoin.BitcoinBlock, work bitcoin
 	submit := []any{
 		any(submission),
 	}
-	success, err := p.activeNodes[chainName].RPC.SubmitBlock(submit)
+	success, err := p.GetPrimaryNode().RPC.SubmitBlock(submit)
 
 	if !success || err != nil {
 		return errors.New("⚠️  Node Rejection: " + err.Error())
@@ -117,9 +119,9 @@ func (p *PoolServer) submitBlockToChain(block bitcoin.BitcoinBlock, work bitcoin
 	return nil
 }
 
-func (p *PoolServer) submitAuxBlock(primaryBlock bitcoin.BitcoinBlock, aux1Block bitcoin.AuxBlock, chainName string) error {
+func (p *PoolServer) submitAuxBlock(primaryBlock bitcoin.BitcoinBlock, aux1Block bitcoin.AuxBlock) error {
 	auxpow := bitcoin.MakeAuxPow(primaryBlock)
-	success, err := p.activeNodes[chainName].RPC.SubmitAuxBlock(aux1Block.Hash, auxpow.Serialize())
+	success, err := p.GetAux1Node().RPC.SubmitAuxBlock(aux1Block.Hash, auxpow.Serialize())
 	if !success {
 		return errors.New("⚠️  Failed to submit aux block: " + err.Error())
 	}
@@ -176,4 +178,15 @@ func (p *PoolServer) createZMQSubscriptionToHashBlock(blockChainName string, has
 	}()
 
 	return sub, nil
+}
+
+func (p *PoolServer) CheckAndRecoverRPCs() error {
+	var err error
+	for _, manager := range p.rpcManagers {
+		err = manager.CheckAndRecoverRPCs()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

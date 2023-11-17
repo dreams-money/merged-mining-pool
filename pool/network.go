@@ -75,7 +75,6 @@ func (pool *PoolServer) listenForConnections() {
 
 		go pool.openNewConnection(client, connectionChannel)
 
-		// TODO - do channels need closing?
 		<-connectionChannel
 
 		numberOfConnections++

@@ -187,15 +187,24 @@ func (r *ShareRepository) GetAccumulatedShareDifficultyBetween(poolID string, st
 }
 
 func (r *ShareRepository) GetEffectiveAccumulatedShareDifficultyBetween(poolID string, start, end time.Time) (float64, error) {
-	query := "SELECT SUM(difficulty / networkdifficulty) FROM shares WHERE poolid = $1 AND created > $2 AND created < $3"
+	// TODO do we need chain?
+	query := "SELECT coalesce(SUM(difficulty / networkdifficulty), 0) FROM shares WHERE poolid = $1 AND created > $2 AND created < $3"
 
 	stmt, err := r.DB.Prepare(query)
 	if err != nil {
 		return 0, err
 	}
 
+	row := stmt.QueryRow(poolID, start, end)
+	if row == nil {
+		return 0, nil
+	}
+
 	var difficulty float64
-	err = stmt.QueryRow(poolID, start, end).Scan(&difficulty)
+	err = row.Scan(&difficulty)
+	if err == sql.ErrNoRows {
+		return 0, nil
+	}
 	if err != nil {
 		return 0, err
 	}

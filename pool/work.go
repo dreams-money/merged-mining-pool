@@ -17,7 +17,15 @@ func (p *PoolServer) fetchRpcBlockTemplatesAndCacheWork() error {
 	var err error
 	template, auxblock, err := p.fetchAllBlockTemplatesFromRPC()
 	if err != nil {
-		return err
+		// Switch nodes if we fail to get work
+		err = p.CheckAndRecoverRPCs()
+		if err != nil {
+			return err
+		}
+		template, auxblock, err = p.fetchAllBlockTemplatesFromRPC()
+		if err != nil {
+			return err
+		}
 	}
 
 	auxillary := p.config.BlockSignature
@@ -29,6 +37,7 @@ func (p *PoolServer) fetchRpcBlockTemplatesAndCacheWork() error {
 	}
 
 	primaryName := p.config.GetPrimary()
+	// TODO this is chain/bitcoin specific
 	rewardPubScriptKey := p.GetPrimaryNode().RewardPubScriptKey
 	extranonceByteReservationLength := 8
 
@@ -132,16 +141,22 @@ func (p *PoolServer) recieveWorkFromClient(share bitcoin.Work, client *stratumCl
 		Status:               persistence.StatusPending,
 		Type:                 statusReadable,
 		ConfirmationProgress: 0,
-		// Effort: 0, // Filled by payout processor later down the road
-		// TransactionConfirmationData: "", // TODO - Return from submit..
-		Miner: minerAddress,
-		// Reward: 0, // Filled by payout processor later down the road
-		Source: "",
+		Miner:                minerAddress,
+		Source:               "",
 	}
 
 	aux1Name := p.config.GetAux1()
 	if aux1Name != "" && shareStatus >= aux1Candidate {
-		err = p.submitAuxBlock(primaryBlockTemplate, *auxBlock, aux1Name)
+		err = p.submitAuxBlock(primaryBlockTemplate, *auxBlock)
+		if err != nil {
+			// Try to submit on different node
+			err = p.rpcManagers[p.config.GetAux1()].CheckAndRecoverRPCs()
+			if err != nil {
+				return err
+			}
+			err = p.submitBlockToChain(primaryBlockTemplate, share)
+		}
+
 		if err != nil {
 			log.Println(err)
 		} else {
@@ -155,8 +170,8 @@ func (p *PoolServer) recieveWorkFromClient(share bitcoin.Work, client *stratumCl
 			found.Hash = auxBlock.Hash
 			found.NetworkDifficulty = aux1Difficulty
 			found.BlockHeight = uint(auxBlock.Height)
-			// TODO - I may have to edit dogecoind.exe
-			found.TransactionConfirmationData = "" // I'm not sure we can get the coinbase from this..
+			// Likely doesn't exist on your AUX coin API unless you editted the daemon source to return this
+			found.TransactionConfirmationData = reverseHexBytes(auxBlock.CoinbaseHash)
 
 			err = persistence.Blocks.Insert(found)
 			if err != nil {
@@ -168,7 +183,16 @@ func (p *PoolServer) recieveWorkFromClient(share bitcoin.Work, client *stratumCl
 	}
 
 	if shareStatus == dualCandidate || shareStatus == primaryCandidate {
-		err = p.submitBlockToChain(primaryBlockTemplate, share, p.config.GetPrimary())
+		err = p.submitBlockToChain(primaryBlockTemplate, share)
+		if err != nil {
+			// Try to submit on different node
+			err = p.rpcManagers[p.config.GetPrimary()].CheckAndRecoverRPCs()
+			if err != nil {
+				return err
+			}
+			err = p.submitBlockToChain(primaryBlockTemplate, share)
+		}
+
 		if err != nil {
 			return err
 		} else {

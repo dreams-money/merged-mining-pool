@@ -1,6 +1,7 @@
 package pool
 
 import (
+	"encoding/json"
 	"errors"
 	"log"
 	"sync"
@@ -9,6 +10,7 @@ import (
 	"designs.capital/dogepool/bitcoin"
 	"designs.capital/dogepool/config"
 	"designs.capital/dogepool/persistence"
+	"designs.capital/dogepool/rpc"
 )
 
 const maxHistory = 3
@@ -16,14 +18,15 @@ const maxHistory = 3
 type PoolServer struct {
 	sync.RWMutex
 	config            *config.Config
-	activeNodes       blockChainNodesMap
+	activeNodes       BlockChainNodesMap
+	rpcManagers       map[string]*rpc.Manager
 	connectionTimeout time.Duration
 	templates         Pair
 	workCache         bitcoin.Work
 	shareBuffer       []persistence.Share
 }
 
-func NewServer(cfg *config.Config) *PoolServer {
+func NewServer(cfg *config.Config, rpcManagers map[string]*rpc.Manager) *PoolServer {
 	if len(cfg.PoolName) < 1 {
 		log.Println("Pool must have a name")
 	}
@@ -34,7 +37,10 @@ func NewServer(cfg *config.Config) *PoolServer {
 		log.Println("Pool must have a blockchain order to tell primary vs aux")
 	}
 
-	pool := &PoolServer{config: cfg}
+	pool := &PoolServer{
+		config:      cfg,
+		rpcManagers: rpcManagers,
+	}
 
 	return pool
 }
@@ -67,21 +73,27 @@ func (pool *PoolServer) broadcastWork(work bitcoin.Work) {
 
 func (p *PoolServer) fetchAllBlockTemplatesFromRPC() (bitcoin.Template, *bitcoin.AuxBlock, error) {
 	var template bitcoin.Template
-	var auxBlock bitcoin.AuxBlock
 	var err error
-
-	primaryNode := p.GetPrimaryNode()
-	aux1Node := p.GetAux1Node()
-
-	template, err = primaryNode.RPC.GetBlockTemplate()
+	response, err := p.GetPrimaryNode().RPC.GetBlockTemplate()
 	if err != nil {
 		return template, nil, errors.New("RPC error: " + err.Error())
 	}
 
-	auxBlock, err = aux1Node.RPC.CreateAuxBlock(aux1Node.RewardAddress)
+	err = json.Unmarshal(response, &template)
+	if err != nil {
+		return template, nil, err
+	}
+
+	response, err = p.GetAux1Node().RPC.CreateAuxBlock(p.GetAux1Node().RewardTo)
 	if err != nil {
 		log.Println("No aux block found: " + err.Error())
 		return template, nil, nil
+	}
+
+	var auxBlock bitcoin.AuxBlock
+	err = json.Unmarshal(response, &auxBlock)
+	if err != nil {
+		return template, nil, err
 	}
 
 	return template, &auxBlock, nil

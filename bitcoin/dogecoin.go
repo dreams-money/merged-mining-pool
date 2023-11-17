@@ -30,3 +30,7 @@ func (Dogecoin) ValidMainnetAddress(address string) bool {
 func (Dogecoin) ValidTestnetAddress(address string) bool {
 	return regexp.MustCompile("^(n|2)[a-km-zA-HJ-NP-Z1-9]{33}$").MatchString(address)
 }
+
+func (Dogecoin) MinimumConfirmations() uint {
+	return uint(251)
+}

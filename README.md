@@ -12,12 +12,12 @@ Features
   - Unique extranonce generation
   - Merged mining
   - API service
+  - RPC failover
+  - Payouts service
 
 Todo
 ----
   - Single coin mining
-  - RPC failover
-  - Payouts service
   - Variable difficulty
 
 Getting Started

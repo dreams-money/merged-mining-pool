@@ -31,15 +31,17 @@ type BalanceRepository struct {
 func (r *BalanceRepository) AddAmount(poolID, chain, address, usage string, amount float32) error {
 	now := time.Now()
 
-	query := "INSERT INTO balance_changes(poolid, chain, address, amount, usage, tags, created) "
-	query = query + "VALUES($1, $2, $3, $4, $5, $6, $7)"
+	// query := "INSERT INTO balance_changes(poolid, chain, address, amount, usage, tags, created) "
+	query := `INSERT INTO balance_changes(poolid, chain, address, amount, usage, created)
+				VALUES($1, $2, $3, $4, $5, $6)`
 
 	stmt, err := r.DB.Prepare(query)
 	if err != nil {
 		return err
 	}
 
-	_, err = stmt.Exec(poolID, chain, address, amount, usage, "", now)
+	// _, err = stmt.Exec(poolID, chain, address, amount, usage, "", now)
+	_, err = stmt.Exec(poolID, chain, address, amount, usage, now)
 	if err != nil {
 		return err
 	}
@@ -106,6 +108,9 @@ func (r *BalanceRepository) GetBalance(poolID, chain, address string) (*float32,
 
 	var balance float32
 	err = row.Scan(&balance)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -113,18 +118,22 @@ func (r *BalanceRepository) GetBalance(poolID, chain, address string) (*float32,
 	return &balance, nil
 }
 
-func (r *BalanceRepository) GetPoolBalancesOverThreshold(poolID string, minimum float32) ([]Balance, error) {
-	query := "SELECT b.poolid, b.chain, b.address, b.created, b.updated "
-	query = query + "FROM balances b "
-	query = query + "LEFT JOIN miner_settings ms ON ms.poolid = b.poolid AND ms.address = b.address "
-	query = query + "WHERE b.poolid = $1 AND b.amount >= COALESCE(ms.paymentthreshold, $2)"
+func (r *BalanceRepository) GetPoolBalancesOverThreshold(poolID, chain string, minimum float32) ([]Balance, error) {
+	query := `SELECT b.poolid, b.chain, b.address, b.created, b.updated
+				FROM balances b
+				LEFT JOIN miner_settings ms
+				ON ms.poolid = b.poolid
+				AND ms.address = b.address
+				WHERE b.poolid = $1
+				AND b.chain = $2
+				AND b.amount >= COALESCE(ms.paymentthreshold, $3)`
 
 	stmt, err := r.DB.Prepare(query)
 	if err != nil {
 		return nil, err
 	}
 
-	rows, err := stmt.Query(poolID, minimum)
+	rows, err := stmt.Query(poolID, chain, minimum)
 	if err != nil {
 		return nil, err
 	}

@@ -2,6 +2,8 @@ package persistence
 
 import (
 	"database/sql"
+	"errors"
+	"fmt"
 	"strings"
 	"time"
 )
@@ -28,6 +30,18 @@ type Found struct {
 	Source                      string
 	Hash                        string
 	Created                     time.Time
+}
+
+type FoundBlocks []Found
+
+func (b *FoundBlocks) GetConfirmed() FoundBlocks {
+	var confirmed FoundBlocks
+	for _, block := range *b {
+		if block.Status == StatusConfirmed {
+			confirmed = append(confirmed, block)
+		}
+	}
+	return confirmed
 }
 
 type FoundRepository struct {
@@ -58,8 +72,21 @@ func (r *FoundRepository) Update(block Found) error {
 		return err
 	}
 
-	_, err = stmt.Exec(block.BlockHeight, block.Status, block.Type, block.Reward, block.Effort,
+	result, err := stmt.Exec(block.BlockHeight, block.Status, block.Type, block.Reward, block.Effort,
 		block.ConfirmationProgress, block.Hash, block.ID)
+	if err != nil {
+		return err
+	}
+
+	count, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if count < 1 {
+		m := fmt.Sprintf("No update of block: %v", block.BlockHeight)
+		return errors.New(m)
+	}
+
 	return err
 }
 
@@ -86,12 +113,15 @@ func (r *FoundRepository) PageBlocks(poolID string, blockStatus []string, page, 
 		return nil, err
 	}
 
-	statusString := strings.Join(blockStatus, "},{")
+	statusString := strings.Join(blockStatus, ",")
 	statusString = "{" + statusString + "}"
 
 	rows, err := stmt.Query(poolID, statusString, page, pageSize)
 	if err != nil {
 		return nil, err
+	}
+	if rows == nil {
+		return nil, nil
 	}
 
 	var blockPage []Found
@@ -144,10 +174,11 @@ func (r *FoundRepository) PageBlocksAcrossAllPools(blockStatus uint, page, pageS
 	return blockPage, nil
 }
 
-func (r *FoundRepository) PendingBlocksForPool(poolID string) ([]Found, error) {
-	query := "SELECT poolid, blockheight, networkdifficulty, status, type, confirmationprogress, "
-	query = query + "effort, transactionconfirmationdata, miner, reward, source, hash, created "
-	query = query + "FROM blocks WHERE poolid = $1 AND status = $2"
+func (r *FoundRepository) PendingBlocksForPool(poolID string) (FoundBlocks, error) {
+	query := `SELECT id, poolid, type, chain, blockheight, networkdifficulty, status,
+					confirmationprogress, effort, transactionconfirmationdata,
+					miner, reward, source, hash, created
+		 		FROM blocks WHERE poolid = $1 AND status = $2`
 
 	stmt, err := r.DB.Prepare(query)
 	if err != nil {
@@ -159,13 +190,15 @@ func (r *FoundRepository) PendingBlocksForPool(poolID string) ([]Found, error) {
 		return nil, err
 	}
 
-	var pending []Found
+	var pending FoundBlocks
 	for rows.Next() {
 		var block Found
 
-		err = rows.Scan(&block.PoolID, &block.BlockHeight, &block.NetworkDifficulty, &block.Status, &block.Type,
-			&block.ConfirmationProgress, &block.Effort, &block.TransactionConfirmationData, &block.Miner,
-			&block.Reward, &block.Source, &block.Hash, &block.Created)
+		err = rows.Scan(&block.ID, &block.PoolID, &block.Type, &block.Chain,
+			&block.BlockHeight, &block.NetworkDifficulty, &block.Status,
+			&block.ConfirmationProgress, &block.Effort,
+			&block.TransactionConfirmationData, &block.Miner, &block.Reward,
+			&block.Source, &block.Hash, &block.Created)
 		if err != nil {
 			return nil, err
 		}
@@ -176,7 +209,7 @@ func (r *FoundRepository) PendingBlocksForPool(poolID string) ([]Found, error) {
 	return pending, nil
 }
 
-func (r *FoundRepository) BlocksBefore(poolID string, blockStatus int, before time.Time) ([]Found, error) {
+func (r *FoundRepository) BlockBefore(poolID string, blockStatus []string, before time.Time) (*Found, error) {
 	query := `SELECT poolid, blockheight, networkdifficulty, status, type, confirmationprogress,
 				effort, transactionconfirmationdata, miner, reward, source, hash, created
 
@@ -188,26 +221,26 @@ func (r *FoundRepository) BlocksBefore(poolID string, blockStatus int, before ti
 		return nil, err
 	}
 
-	rows, err := stmt.Query(poolID, blockStatus, before)
+	statusString := strings.Join(blockStatus, ",")
+	statusString = "{" + statusString + "}"
+
+	row := stmt.QueryRow(poolID, statusString, before)
+	if row == nil {
+		return nil, nil
+	}
+
+	found := Found{}
+	err = row.Scan(&found.PoolID, &found.BlockHeight, &found.NetworkDifficulty, &found.Status, &found.Type,
+		&found.ConfirmationProgress, &found.Effort, &found.TransactionConfirmationData, &found.Miner,
+		&found.Reward, &found.Source, &found.Hash, &found.Created)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
 	if err != nil {
-		return nil, err
+		return &found, err
 	}
 
-	var blocksBefore []Found
-	for rows.Next() {
-		var block Found
-
-		err = rows.Scan(&block.PoolID, &block.BlockHeight, &block.NetworkDifficulty, &block.Status, &block.Type,
-			&block.ConfirmationProgress, &block.Effort, &block.TransactionConfirmationData, &block.Miner,
-			&block.Reward, &block.Source, &block.Hash, &block.Created)
-		if err != nil {
-			return nil, err
-		}
-
-		blocksBefore = append(blocksBefore, block)
-	}
-
-	return blocksBefore, nil
+	return &found, nil
 }
 
 func (r *FoundRepository) BlockByHeight(poolID string, height uint) (*Found, error) {

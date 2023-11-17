@@ -1,10 +1,17 @@
 {
-    "pool_name": "Merged Mining",
+    "pool_name": "TESTNET - Merged Mining",
     "port": ":3643",
     "max_connections": 99,
     "connection_timeout": "10s",
     "pool_difficulty": 2000,
+    // Arbitrary data to add to every block
     "block_signature": "ShowUrFace2DefeatWChinHi",
+    // If you have multiple chains, what order should they be considered in
+    "merged_blockchain_order": [
+        "litecoin", // Primary chain
+        "dogecoin" // Aux1
+        // Aux N..
+    ],
     "blockchains": {
         "dogecoin": [
             {
@@ -14,7 +21,7 @@
                 "rpc_password": "asdf",
                 "block_notify_url": "tcp://localhost:1222",
                 "timeout": "10s",
-                "reward_address": "nc9AHNBPksJbf6wig78zE8BMmKND6hLvnc"
+                "reward_to": "nc9AHNBPksJbf6wig78zE8BMmKND6hLvnc"
             },
             {
                 "name": "backup",
@@ -23,7 +30,7 @@
                 "rpc_password": "asdf",
                 "block_notify_url": "tcp://localhost:1222",
                 "timeout": "10s",
-                "reward_address": "nc9AHNBPksJbf6wig78zE8BMmKND6hLvnc"
+                "reward_to": "nc9AHNBPksJbf6wig78zE8BMmKND6hLvnc"
             }
         ],
         "litecoin": [
@@ -34,7 +41,7 @@
                 "rpc_password": "asdf",
                 "block_notify_url": "tcp://localhost:1222",
                 "timeout": "10s",
-                "reward_address": "tltc1qyxmwasu29zxde5cuyc6m603c2x2lxlm0cq3gx7"
+                "reward_to": "tltc1qyxmwasu29zxde5cuyc6m603c2x2lxlm0cq3gx7"
             },
             {
                 "name": "backup",
@@ -43,17 +50,15 @@
                 "rpc_password": "asdf",
                 "block_notify_url": "tcp://localhost:1222",
                 "timeout": "10s",
-                "reward_address": "tltc1qyxmwasu29zxde5cuyc6m603c2x2lxlm0cq3gx7"
+                "reward_to": "tltc1qyxmwasu29zxde5cuyc6m603c2x2lxlm0cq3gx7"
             }
         ]
     },
-    "merged_blockchain_order": [
-        "litecoin",
-        "dogecoin"
-    ],
     // All shares get written to memory at first, then mass inserted into persistence
     "share_flush_interval": "5s",
+    // How large the hashrate window is in HR calculations
     "hashrate_window": "10m",
+    // How often to make a stats point
     "pool_stats_interval": "2m",
     "persistence": {
         "host": "127.0.0.1",
@@ -63,9 +68,40 @@
         "database": "merged_mining",
         "sslmode": "disable"
     },
+    "payouts": {
+        // How often to run payouts
+        "interval": "10m",
+        "scheme": "PPLNS",
+        "chains": {
+            "litecoin": {
+                // Can be different than reward_to I.e. PPS
+                "reward_from": "tltc1qyxmwasu29zxde5cuyc6m603c2x2lxlm0cq3gx7",
+                "pool_rewards": [
+                    {
+                        "address": "tltc1qyxmwasu29zxde5cuyc6m603c2x2lxlm0cq3gx7",
+                        "percentage": 0.01
+                    }
+                ],
+                "miner_min_payment": 0.25
+            },
+            "dogecoin": {
+                // Can be different than reward_to I.e. PPS
+                "reward_from": "nc9AHNBPksJbf6wig78zE8BMmKND6hLvnc",
+                "pool_rewards": [
+                    {
+                        "address": "nc9AHNBPksJbf6wig78zE8BMmKND6hLvnc",
+                        "percentage": 0.01
+                    }
+                ],
+                "miner_min_payment": 100000
+            }
+        }
+    },
     "api": {
         "port": "8001"
     },
+    // How often to run app stats
     // Reports memory usage and Goroutine count
+    // This currently runs the programs blocking loop, so it's necessary to have > 0 value.
     "app_stats_interval": "1m"
 }

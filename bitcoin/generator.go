@@ -7,7 +7,7 @@ import (
 	"math/big"
 )
 
-type Generator interface {
+type BlockGenerator interface {
 	MakeHeader(extranonce, nonce string) (string, error) // On aux generation, on work verfication, and possibily even work submission
 	Header() string
 	Sum() (*big.Int, error)  // On work verification, many, more than than header generation
