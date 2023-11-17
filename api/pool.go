@@ -2,11 +2,13 @@ package api
 
 import (
 	"log"
+	"strings"
+	"time"
 
 	"designs.capital/dogepool/persistence"
 )
 
-func getPoolIndex(poolID string) map[string]any {
+func getPoolIndex(poolID string, chains []string) map[string]any {
 	stat, err := persistence.Pool.GetLastStat(poolID)
 	logOnError(err)
 
@@ -15,7 +17,7 @@ func getPoolIndex(poolID string) map[string]any {
 		"ActiveMiners":  stat.ConnectedMiners,
 		"Workers":       stat.ConnectedWorkers,
 		"BlocksPerHour": blocksPerHour(poolID),
-		"LatestBlocks":  recentBlocks(poolID),
+		"LatestBlocks":  recentBlocks(poolID, chains),
 	}
 }
 
@@ -25,10 +27,38 @@ func blocksPerHour(poolID string) uint {
 	return rate
 }
 
-func recentBlocks(poolId string) []persistence.Found {
-	found, err := persistence.Blocks.PageBlocks(poolId, []string{persistence.StatusConfirmed}, 0, 100)
-	logOnError(err)
-	return found
+type Block struct {
+	Chain      string `json:"chain"`
+	Height     int    `json:"blockHeight"`
+	HashHeader string `json:"hash"`
+	Created    string `json:"created"`
+	MinutesAgo int
+}
+
+func recentBlocks(poolId string, chains []string) []Block {
+	var allChains []persistence.Found
+	for _, chain := range chains {
+		found, err := persistence.Blocks.PageBlocks(poolId, chain, []string{persistence.StatusConfirmed}, 0, 5)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		allChains = append(allChains, found...)
+	}
+
+	now := time.Now()
+	recent := make([]Block, len(allChains))
+	for i, block := range allChains {
+		recent[i] = Block{
+			Chain:      strings.ToUpper(block.Chain[:1]) + block.Chain[1:],
+			Height:     int(block.BlockHeight),
+			HashHeader: block.Hash,
+			Created:    block.Created.String(),
+			MinutesAgo: int(now.Sub(block.Created).Minutes()),
+		}
+	}
+
+	return recent
 }
 
 func logOnError(err error) {

@@ -7,7 +7,7 @@ import (
 	"designs.capital/dogepool/persistence"
 )
 
-func getDashboardStats(poolId, minerId string) map[string]any {
+func getDashboardStats(poolId, minerId string, chains []string) map[string]any {
 	if minerId == "" {
 		return map[string]any{}
 	}
@@ -24,8 +24,11 @@ func getDashboardStats(poolId, minerId string) map[string]any {
 
 	active, inactive := getWorkerCounts(poolId, minerId)
 
+	balances := report.ChainAccounts.GetPendingAmounts()
+	balances = padZeros(balances, chains)
+
 	return map[string]any{
-		"Balances":        report.ChainAccounts.GetTotalPaidAmounts(),
+		"Balances":        balances,
 		"CurrentHashrate": floatToHashrate(hashrateFloat),
 		"ActiveWorkers":   active,
 		"InactiveWorkers": inactive,
@@ -82,4 +85,14 @@ func minerWorkers(poolId, minerId string) []Worker {
 	}
 
 	return workers
+}
+
+func padZeros(balances map[string]float32, chains []string) map[string]float32 {
+	for _, chain := range chains {
+		_, exists := balances[chain]
+		if !exists {
+			balances[chain] = 0
+		}
+	}
+	return balances
 }

@@ -95,6 +95,7 @@ func classifyBlocks(blocks persistence.FoundBlocks, rpcManagers map[string]*rpc.
 		case "immature":
 			min := bitcoin.GetChain(localBlock.Chain).MinimumConfirmations()
 			blocks[i].ConfirmationProgress = float32(coinbaseTransaction.Confirmations) / float32(min)
+			blocks[i].ConfirmationProgress = roundToThreeDigits(blocks[i].ConfirmationProgress)
 			blocks[i].Reward = coinbaseTransaction.Amount
 		case "generate":
 			blocks[i].Status = persistence.StatusConfirmed

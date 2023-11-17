@@ -8,9 +8,9 @@ Currently, only POSTGRES is supported, but any storage engine (or combination of
 Simply interface on the methods for each object, then factory out the connections with persister.go,
 
 ## Quick illustation of stats window adjustments
-Accurate hashrates are possibled with adjusted hashrate windows.
+Accurate hashrates are possible with adjusted hashrate windows.
 
-    adjustedWindow = (if now)
+    adjustedWindow =
 
     A = startDifference
     B = endDifference

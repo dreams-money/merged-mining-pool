@@ -1,6 +1,9 @@
 package payouts
 
-import "errors"
+import (
+	"errors"
+	"math"
+)
 
 func reverseHexBytes(hex string) (string, error) {
 	if len(hex)%2 != 0 {
@@ -12,4 +15,8 @@ func reverseHexBytes(hex string) (string, error) {
 		o = o + hex[i-2:i]
 	}
 	return o, nil
+}
+
+func roundToThreeDigits(x float32) float32 {
+	return float32(math.Round(float64(x)*1000) / 1000)
 }

@@ -38,7 +38,7 @@ func (scheme PPLNS) UpdateMinerBalances(poolID string, blockReward float32, conf
 		inclusive = false
 		currentPage++
 
-		log.Printf("PPLNS Payouts: paging through page %v of shares\n", currentPage)
+		log.Printf("PPLNS Payouts: paging through page %v of shares for %v block %v\n", currentPage, confirmed.Chain, confirmed.BlockHeight)
 
 		for _, share := range page {
 			// TODO: Adjust share difficulty if coin needs it.
@@ -73,7 +73,8 @@ func (scheme PPLNS) UpdateMinerBalances(poolID string, blockReward float32, conf
 
 	var err error
 	for miner, reward := range minerRewards {
-		log.Printf("Awarding %v %v PPLNS reward to miner %v\n", reward, confirmed.Chain, confirmed.Miner)
+		log.Printf("Awarding %v %v PPLNS reward to miner %v for work on %v block %v\n",
+			reward, confirmed.Chain, confirmed.Miner, confirmed.Chain, confirmed.BlockHeight)
 
 		usage := "PPLNS REWARD FOR BLOCK %v"
 		usage = fmt.Sprintf(usage, confirmed.BlockHeight)

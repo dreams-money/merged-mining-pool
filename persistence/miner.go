@@ -113,6 +113,14 @@ type MinerAccount struct {
 
 type ChainAccounts map[string]MinerAccount
 
+func (accounts *ChainAccounts) GetPendingAmounts() map[string]float32 {
+	amounts := make(map[string]float32)
+	for chain, account := range *accounts {
+		amounts[chain] = account.PendingBalance
+	}
+	return amounts
+}
+
 func (accounts *ChainAccounts) GetTotalPaidAmounts() map[string]float32 {
 	amounts := make(map[string]float32)
 	for chain, account := range *accounts {

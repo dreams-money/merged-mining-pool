@@ -11,7 +11,8 @@ import (
 type SOLO struct{}
 
 func (SOLO) UpdateMinerBalances(poolID string, remainingReward float32, confirmed persistence.Found) (time.Time, error) {
-	log.Printf("Awarding %v %v SOLO reward to miner %v\n", remainingReward, confirmed.Chain, confirmed.Miner)
+	log.Printf("Awarding %v %v SOLO reward to miner %v for work on %v block %v\n",
+		remainingReward, confirmed.Chain, confirmed.Miner, confirmed.Chain, confirmed.BlockHeight)
 
 	usage := "SOLO REWARD FOR BLOCK %v"
 	usage = fmt.Sprintf(usage, confirmed.BlockHeight)

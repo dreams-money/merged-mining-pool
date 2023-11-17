@@ -30,7 +30,7 @@ func (PROP) UpdateMinerBalances(poolID string, blockReward float32, confirmed pe
 		inclusive = false
 		currentPage++
 
-		log.Printf("PROP Payouts: paging through page %v of shares\n", currentPage)
+		log.Printf("PROP Payouts: paging through page %v of shares for %v block %v\n", currentPage, confirmed.Chain, confirmed.BlockHeight)
 
 		for _, share := range page {
 			// TODO: Adjust share difficulty if coin needs it.
@@ -73,7 +73,8 @@ func (PROP) UpdateMinerBalances(poolID string, blockReward float32, confirmed pe
 
 	var err error
 	for miner, reward := range minerRewards {
-		log.Printf("Awarding %v %v PROP reward to miner %v\n", reward, confirmed.Chain, confirmed.Miner)
+		log.Printf("Awarding %v %v PROP reward to miner %v for work on %v block %v\n",
+		reward, confirmed.Chain, confirmed.Miner, confirmed.Chain, confirmed.BlockHeight)
 
 		usage := "PROP REWARD FOR BLOCK %v"
 		usage = fmt.Sprintf(usage, confirmed.BlockHeight)

@@ -19,7 +19,7 @@ func minerIndex(response http.ResponseWriter, request *http.Request) {
 	minerId := request.URL.Query().Get("id")
 	response.Header().Set("Content-Type", "application/json")
 	response.Header().Set("Access-Control-Allow-Origin", "*")
-	err := json.NewEncoder(response).Encode(getDashboardStats(serverConfig.PoolName, minerId))
+	err := json.NewEncoder(response).Encode(getDashboardStats(serverConfig.PoolName, minerId, serverConfig.BlockChainOrder))
 	if err != nil {
 		http.Error(response, fmt.Sprintf("error building the response, %v", err), http.StatusInternalServerError)
 	}
@@ -48,7 +48,7 @@ func poolIndex(response http.ResponseWriter, request *http.Request) {
 
 	response.Header().Set("Content-Type", "application/json")
 	response.Header().Set("Access-Control-Allow-Origin", "*")
-	err := json.NewEncoder(response).Encode(getPoolIndex(serverConfig.PoolName))
+	err := json.NewEncoder(response).Encode(getPoolIndex(serverConfig.PoolName, serverConfig.BlockChainOrder))
 	if err != nil {
 		http.Error(response, fmt.Sprintf("error building the response, %v", err), http.StatusInternalServerError)
 	}

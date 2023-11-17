@@ -55,11 +55,12 @@ func (r *BalanceRepository) AddAmount(poolID, chain, address, usage string, amou
 		PoolID:  poolID,
 		Chain:   chain,
 		Address: address,
-		Created: now,
+		Amount:  amount,
 		Updated: now,
 	}
 
 	if balance == nil {
+		balanceRecord.Created = now
 		return r.Insert(balanceRecord)
 	}
 

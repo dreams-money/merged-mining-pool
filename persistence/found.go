@@ -102,11 +102,11 @@ func (r *FoundRepository) Delete(block Found) error {
 	return err
 }
 
-func (r *FoundRepository) PageBlocks(poolID string, blockStatus []string, page, pageSize int) ([]Found, error) {
-	query := `SELECT poolid, blockheight, networkdifficulty, status, type, confirmationprogress,
+func (r *FoundRepository) PageBlocks(poolID, chain string, blockStatus []string, page, pageSize int) ([]Found, error) {
+	query := `SELECT id, poolid, chain, blockheight, networkdifficulty, status, type, confirmationprogress,
 	          effort, transactionconfirmationdata, miner, reward, source, hash, created
-			  FROM blocks WHERE poolid = $1 AND status = ANY($2)
-			  ORDER BY created DESC OFFSET $3 FETCH NEXT $4 ROWS ONLY`
+			  FROM blocks WHERE poolid = $1 AND chain = $2 AND status = ANY($3)
+			  ORDER BY created DESC OFFSET $4 FETCH NEXT $5 ROWS ONLY`
 
 	stmt, err := r.DB.Prepare(query)
 	if err != nil {
@@ -116,7 +116,7 @@ func (r *FoundRepository) PageBlocks(poolID string, blockStatus []string, page, 
 	statusString := strings.Join(blockStatus, ",")
 	statusString = "{" + statusString + "}"
 
-	rows, err := stmt.Query(poolID, statusString, page, pageSize)
+	rows, err := stmt.Query(poolID, chain, statusString, page, pageSize)
 	if err != nil {
 		return nil, err
 	}
@@ -128,9 +128,9 @@ func (r *FoundRepository) PageBlocks(poolID string, blockStatus []string, page, 
 	for rows.Next() {
 		var block Found
 
-		err = rows.Scan(&block.PoolID, &block.BlockHeight, &block.NetworkDifficulty, &block.Status, &block.Type,
-			&block.ConfirmationProgress, &block.Effort, &block.TransactionConfirmationData, &block.Miner,
-			&block.Reward, &block.Source, &block.Hash, &block.Created)
+		err = rows.Scan(&block.ID, &block.PoolID, &block.Chain, &block.BlockHeight, &block.NetworkDifficulty,
+			&block.Status, &block.Type, &block.ConfirmationProgress, &block.Effort, &block.TransactionConfirmationData,
+			&block.Miner, &block.Reward, &block.Source, &block.Hash, &block.Created)
 		if err != nil {
 			return nil, err
 		}
