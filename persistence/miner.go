@@ -230,17 +230,20 @@ func (r *MinerRepository) GetMinerStatsReport(poolID, address string, payments *
 		return &report, nil
 	}
 
-	stat, err := r.GetMinerStatByCreatedTime(poolID, address, *lastUpdate)
+	stats, err := r.GetMinerStatsByCreatedTime(poolID, address, *lastUpdate)
 	if err != nil {
 		return nil, err
 	}
 
 	report.Created = *lastUpdate
 	report.WorkersReport = newWorkerReport()
-	report.WorkersReport.Workers[stat.Worker] = WorkerStat{
-		Worker:          stat.Worker,
-		Hashrate:        stat.Hashrate,
-		SharesPerSecond: stat.SharesPerSecond,
+
+	for _, stat := range stats {
+		report.WorkersReport.Workers[stat.Worker] = WorkerStat{
+			Worker:          stat.Worker,
+			Hashrate:        stat.Hashrate,
+			SharesPerSecond: stat.SharesPerSecond,
+		}
 	}
 
 	return &report, nil
@@ -253,7 +256,7 @@ type MinerAverage struct {
 	AverageSharesPerSecond float64   `json:"avg_sharespersecond"`
 }
 
-func (r *MinerRepository) GetMinerHourlyAveragesBetween(poolID, miner string, start, end time.Time) (map[string]MinerAverage, error) {
+func (r *MinerRepository) GetMinerHourlyAveragesBetween(poolID, miner string, start, end time.Time) (map[string][]MinerAverage, error) {
 	query := `SELECT worker,
 		date_trunc('hour', created) AS created,
 		AVG(hashrate) AS avg_hashrate,
@@ -271,14 +274,14 @@ func (r *MinerRepository) GetMinerHourlyAveragesBetween(poolID, miner string, st
 		return nil, err
 	}
 
-	averages := make(map[string]MinerAverage)
+	averages := make(map[string][]MinerAverage)
 	for rows.Next() {
 		var average MinerAverage
 		err = rows.Scan(&average.Worker, &average.Created, &average.AverageHashrate, &average.AverageSharesPerSecond)
 		if err != nil {
 			return averages, err
 		}
-		averages[average.Worker] = average
+		averages[average.Worker] = append(averages[average.Worker], average)
 	}
 
 	return averages, nil
@@ -356,8 +359,7 @@ func (r *MinerRepository) GetMinerPerformanceBetweenTimesAtInterval(poolID, addr
 	return &report, nil
 }
 
-func (r *MinerRepository) GetMinerStatByCreatedTime(poolID, address string, created time.Time) (*MinerStat, error) {
-	var stat MinerStat
+func (r *MinerRepository) GetMinerStatsByCreatedTime(poolID, address string, created time.Time) ([]MinerStat, error) {
 	query := "SELECT poolid, miner, worker, hashrate, sharespersecond, created FROM minerstats WHERE poolid = $1 AND miner = $2 AND created = $3"
 
 	stmt, err := r.DB.Prepare(query)
@@ -365,17 +367,28 @@ func (r *MinerRepository) GetMinerStatByCreatedTime(poolID, address string, crea
 		return nil, err
 	}
 
-	row := stmt.QueryRow(poolID, address, created)
+	row, err := stmt.Query(poolID, address, created)
+	if err != nil {
+		return nil, err
+	}
 	if row == nil {
 		return nil, nil
 	}
 
-	err = row.Scan(&stat.PoolID, &stat.Miner, &stat.Worker, &stat.Hashrate, &stat.SharesPerSecond, &stat.Created)
-	if err != nil {
-		return nil, err
+	var stats []MinerStat
+	for row.Next() {
+		var stat MinerStat
+		err = row.Scan(&stat.PoolID, &stat.Miner, &stat.Worker, &stat.Hashrate, &stat.SharesPerSecond, &stat.Created)
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		if err != nil {
+			return nil, err
+		}
+		stats = append(stats, stat)
 	}
 
-	return &stat, nil
+	return stats, nil
 }
 
 func (r *MinerRepository) GetMinerStatsBetweenTimes(poolID, address string, start, end time.Time) ([]MinerStat, error) {

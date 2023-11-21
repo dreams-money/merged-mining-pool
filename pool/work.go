@@ -98,13 +98,13 @@ func (p *PoolServer) recieveWorkFromClient(share bitcoin.Work, client *stratumCl
 	}
 
 	if shareStatus == shareInvalid {
-		m := "❔ Invalid share for block %v from %v"
-		m = fmt.Sprintf(m, heightMessage, client.ip)
+		m := "❔ Invalid share for block %v from %v [%v] [%v]"
+		m = fmt.Sprintf(m, heightMessage, client.ip, rigID, client.userAgent)
 		return errors.New(m)
 	}
 
-	m := "Valid share for block %v from %v"
-	m = fmt.Sprintf(m, heightMessage, client.ip)
+	m := "Valid share for block %v from %v [%v]"
+	m = fmt.Sprintf(m, heightMessage, client.ip, rigID)
 	log.Println(m)
 
 	blockTarget := bitcoin.Target(primaryBlockTemplate.Template.Target)
@@ -132,8 +132,8 @@ func (p *PoolServer) recieveWorkFromClient(share bitcoin.Work, client *stratumCl
 	statusReadable := statusMap[shareStatus]
 	successStatus := 0
 
-	m = "%v block candidate for block %v from %v"
-	m = fmt.Sprintf(m, statusReadable, heightMessage, client.ip)
+	m = "%v block candidate for block %v from %v [%v]"
+	m = fmt.Sprintf(m, statusReadable, heightMessage, client.ip, rigID)
 	log.Println(m)
 
 	found := persistence.Found{
@@ -224,7 +224,7 @@ func (p *PoolServer) recieveWorkFromClient(share bitcoin.Work, client *stratumCl
 
 	statusReadable = statusMap[successStatus]
 
-	log.Printf("✅  Successful %v submission of block %v from: %v", statusReadable, heightMessage, client.ip)
+	log.Printf("✅  Successful %v submission of block %v from: %v [%v]", statusReadable, heightMessage, client.ip, rigID)
 
 	return nil
 }

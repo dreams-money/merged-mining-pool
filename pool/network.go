@@ -21,7 +21,7 @@ type stratumClient struct {
 	extranonce_subscribed bool
 	userAgent             string
 
-	sessionID     int
+	sessionID     string
 	connection    net.Conn
 	streamEncoder *json.Encoder
 }
@@ -38,7 +38,6 @@ func (pool *PoolServer) listenForConnections() {
 	panicOnError(err)
 	defer server.Close()
 
-	connectionChannel := make(chan struct{})
 	for { // Listen for connections
 		if numberOfConnections > pool.config.MaxConnections {
 			log.Println("Maximum number of connections reached")
@@ -73,9 +72,7 @@ func (pool *PoolServer) listenForConnections() {
 			connection:  con,
 		}
 
-		go pool.openNewConnection(client, connectionChannel)
-
-		<-connectionChannel
+		go pool.openNewConnection(client)
 
 		numberOfConnections++
 	}
@@ -83,7 +80,7 @@ func (pool *PoolServer) listenForConnections() {
 
 const maxRequestSize = 1024
 
-func (pool *PoolServer) openNewConnection(client *stratumClient, connectionChannel chan struct{}) {
+func (pool *PoolServer) openNewConnection(client *stratumClient) {
 	err := pool.handleStratumConnection(client)
 	if err != nil {
 		log.Println(err)
@@ -91,7 +88,6 @@ func (pool *PoolServer) openNewConnection(client *stratumClient, connectionChann
 		client.connection.Close()
 		numberOfConnections--
 	}
-	connectionChannel <- struct{}{}
 }
 
 func (pool *PoolServer) handleStratumConnection(client *stratumClient) error {

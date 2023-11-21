@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"designs.capital/dogepool/bitcoin"
+	"github.com/google/uuid"
 )
 
 type stratumResponse struct {
@@ -80,13 +81,11 @@ func miningSubscribe(request *stratumRequest, client *stratumClient) (stratumRes
 		client.userAgent = clientType
 	}
 
-	// TODO - make this random.  This currently profiles the amount of connections we have
-	sessionID := fmt.Sprintf("%08x", client.sessionID)
-	// TODO confirm this is session ID.  Or "Subscription ID.."
+	client.sessionID = uuid.NewString()
 
 	var subscriptions []interface{}
-	difficulty := interface{}([]string{"mining.set_difficulty", sessionID})
-	notify := interface{}([]string{"mining.notify", sessionID})
+	difficulty := interface{}([]string{"mining.set_difficulty", client.sessionID})
+	notify := interface{}([]string{"mining.notify", client.sessionID})
 	extranonce1 := interface{}(client.extranonce1)
 	extranonce2Length := interface{}(4)
 
@@ -158,9 +157,6 @@ func miningAuthorize(request *stratumRequest, client *stratumClient, pool *PoolS
 	client.login = loginString
 
 	addSession(client)
-
-	// TODO
-	// Write to persistence
 
 	authResponse.Result = interface{}(true)
 
