@@ -74,6 +74,19 @@ func getMinerHistory(poolId, minerId string) []HourStat {
 				},
 			}
 
+			// We need to put "0 stat" history into the past
+			//
+			// i.e. If you recall from above:
+			// 		hourStats := [0, 1, 2, 3, 4, 5, .. 23]
+			// 		if index 1, 3, and 4 have stats
+			// 		index 0's "0 stat" needs to be yesterday, as do 5-23 - this creates a "0" history that's in the past
+			// 		HOWEVER, note that index 2 "0 stat" needs to be today! - this a break in todays history.
+			//
+			//		result 5..23 0 1 2 3 4
+			//             Y..Y  Y T T T T
+			//
+			// Our chart can now put the 0 history into the past
+			//
 			if i > nonZeroStatIndex {
 				for j := i; j < l; j++ {
 					forwardStat := hourStats[j]
