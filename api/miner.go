@@ -50,25 +50,41 @@ func getMinerHistory(poolId, minerId string) []HourStat {
 	// Find the non empty stat
 	statDate := time.Time{}
 	statDenomination := ""
-	for _, stat := range hourStats {
+	nonZeroStatIndex := 0
+	for i, stat := range hourStats {
 		if !stat.Created.IsZero() {
 			statDate = stat.Created
 			statDenomination = floatToHashrate(stat.HashRate.Raw).Denomination
+			nonZeroStatIndex = i
 			break
 		}
 	}
 
 	var statsNoZeros []HourStat
+	l := len(hourStats)
+
 	for i, stat := range hourStats {
 		if stat.Created.IsZero() {
-			statsNoZeros = append(statsNoZeros, HourStat{
-				Created: time.Date(statDate.Year(), statDate.Month(), statDate.Day(), i, 0, 0, 0, statDate.Location()),
+			statNoZero := HourStat{
+				Created: time.Date(statDate.Year(), statDate.Month(), statDate.Day()-1, i, 0, 0, 0, statDate.Location()),
 				HashRate: HashRate{
 					Raw:          0,
 					Denomination: statDenomination,
 					Rate:         "0",
 				},
-			})
+			}
+
+			if i > nonZeroStatIndex {
+				for j := i; j < l; j++ {
+					forwardStat := hourStats[j]
+					if !forwardStat.Created.IsZero() {
+						statNoZero.Created.AddDate(0, 0, 1)
+						break
+					}
+				}
+			}
+
+			statsNoZeros = append(statsNoZeros, statNoZero)
 		} else {
 			statsNoZeros = append(statsNoZeros, HourStat{
 				Created:         stat.Created,
