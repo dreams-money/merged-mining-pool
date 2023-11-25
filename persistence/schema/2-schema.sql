@@ -1,4 +1,4 @@
-SET ROLE miningcore;
+SET ROLE mergedmining;
 
 CREATE TABLE shares
 (
@@ -90,7 +90,7 @@ CREATE TABLE payments
 	created TIMESTAMPTZ NOT NULL
 );
 
-CREATE INDEX IDX_PAYMENTS_POOL_COIN_WALLET on payments(poolid, coin, address);
+CREATE INDEX IDX_PAYMENTS_POOL_COIN_WALLET on payments(poolid, chain, address);
 
 CREATE TABLE poolstats
 (

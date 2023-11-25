@@ -1,5 +1,6 @@
-SET ROLE miningcore;
+SET ROLE mergedmining;
 
+/* WARNING - this will drop all your shares */
 DROP TABLE shares;
 
 CREATE TABLE shares

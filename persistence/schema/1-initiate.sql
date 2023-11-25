@@ -1,2 +1,2 @@
-CREATE ROLE miningcore WITH LOGIN ENCRYPTED PASSWORD 'your-secure-password';
-CREATE DATABASE miningcore OWNER miningcore;
+CREATE ROLE mergedmining WITH LOGIN ENCRYPTED PASSWORD 'your-secure-password';
+CREATE DATABASE mergedmining OWNER mergedmining;
