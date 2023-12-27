@@ -182,10 +182,11 @@ func (p *PoolServer) createZMQSubscriptionToHashBlock(blockChainName string, has
 
 func (p *PoolServer) CheckAndRecoverRPCs() error {
 	var err error
-	for _, manager := range p.rpcManagers {
+	for coin, manager := range p.rpcManagers {
 		err = manager.CheckAndRecoverRPCs()
 		if err != nil {
-			return err
+			coinError := errors.New(coin)
+			return errors.Join(coinError, err)
 		}
 	}
 	return nil

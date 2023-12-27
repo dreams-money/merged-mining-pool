@@ -23,15 +23,30 @@ Todo
 Getting Started
 ---------------
 
-Take a look at config.example.json to get started.  You'll need access to a [blockchain RPC](https://dogecoin.com/dogepedia/how-tos/operating-a-node/) and a [ZMQ block notification URL](https://github.com/bitcoin/bitcoin/blob/master/doc/zmq.md).
+Take a look at config.example.json to get started.
 
-You have to start your nodes with block notification on:
+You'll need access to a [blockchain RPC](https://dogecoin.com/dogepedia/how-tos/operating-a-node/) and a [ZMQ block notification URL](https://github.com/bitcoin/bitcoin/blob/master/doc/zmq.md).
+
+For ZMQ notifications you have to start your nodes with block notification on:
 
     // Assuming your node is on the same machine as this pool
     -zmqpubhashblock="tcp://127.0.0.1:<your-port-here>"
 
     // remote nodes need additional configuration if they're on WAN or LAN (firewalls, port forwarding, etc.)
     -zmqpubhashblock="tcp://0.0.0.0:<your-port-here>"
+
+Setting up the Postgres database
+--------------------------------
+
+The pools been tested with Postgres 16.  Once installed, you can log into the Postgres server w/
+
+    sudo -u postgres psql
+
+Check out the directory below to find scripts which will setup your databases.
+
+    persistence/schemas
+
+You can skip 3-multi-pool-partition.sql if you're still testing.
 
 Connecting to the pool
 ----------------------

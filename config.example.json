@@ -1,6 +1,6 @@
 {
     "pool_name": "TESTNET - Merged Mining",
-    "port": ":3643",
+    "port": "3643",
     "max_connections": 99,
     "connection_timeout": "10s",
     "pool_difficulty": 2000,

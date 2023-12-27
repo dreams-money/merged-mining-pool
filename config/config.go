@@ -92,7 +92,8 @@ func LoadConfig(fileName string) *Config {
 	logFatalOnError(err)
 
 	var c Config
-	json.Unmarshal(fileBytes, &c)
+	err = json.Unmarshal(fileBytes, &c)
+	logFatalOnError(err)
 
 	if len(c.BlockchainNodes) < 1 {
 		panic("You need to configure coin nodes")
