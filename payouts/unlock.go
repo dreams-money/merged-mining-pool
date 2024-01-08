@@ -25,21 +25,6 @@ func unlockBlocks(poolID string, rpcManager map[string]*rpc.Manager) (persistenc
 	return calculateBlockEffort(blocks, poolID)
 }
 
-type BlockchainNodeMap map[string]BlockchainNode
-
-func (m BlockchainNodeMap) GetChain(name string) BlockchainNode {
-	node, exists := m[name]
-	if !exists {
-		panic("Payouts: Failed to get blockchain node: " + name)
-	}
-	return node
-}
-
-type BlockchainNode struct {
-	RPC      *rpc.RPCClient
-	RewardTo string
-}
-
 // TODO - This is very bitcoin/chain specific
 // We eventually have to let the chain package consume the RPC package, and handle all chain related logic there.
 // ^ That will take care of a lot of TODOs related to seperation of concerns
