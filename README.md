@@ -40,7 +40,8 @@ Setting up the Postgres database
 
 The pools been tested with Postgres 16.  Once installed, you can log into the Postgres server w/
 
-    sudo -u postgres psql
+    sudo -u postgres psql # Unix
+    psql -U postgres # Windows
 
 Check out the directory below to find scripts which will setup your databases.
 

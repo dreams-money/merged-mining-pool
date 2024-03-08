@@ -47,7 +47,7 @@ func getMinerHistory(poolId, minerId string) []HourStat {
 		for _, average := range averages {
 			difference := now.Sub(average.Created)
 			i := int(difference.Hours())
-			if i > 23 { // Ignore same stat from 24 hours ago.
+			if i > 23 { // Ignore older stats
 				continue
 			}
 			stat := hourStats[i]
