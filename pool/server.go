@@ -13,8 +13,6 @@ import (
 	"designs.capital/dogepool/rpc"
 )
 
-const maxHistory = 3
-
 type PoolServer struct {
 	sync.RWMutex
 	config            *config.Config
@@ -84,16 +82,19 @@ func (p *PoolServer) fetchAllBlockTemplatesFromRPC() (bitcoin.Template, *bitcoin
 		return template, nil, err
 	}
 
-	response, err = p.GetAux1Node().RPC.CreateAuxBlock(p.GetAux1Node().RewardTo)
-	if err != nil {
-		log.Println("No aux block found: " + err.Error())
-		return template, nil, nil
-	}
-
 	var auxBlock bitcoin.AuxBlock
-	err = json.Unmarshal(response, &auxBlock)
-	if err != nil {
-		return template, nil, err
+
+	if p.config.GetAux1() != "" {
+		response, err = p.GetAux1Node().RPC.CreateAuxBlock(p.GetAux1Node().RewardTo)
+		if err != nil {
+			log.Println("No aux block found: " + err.Error())
+			return template, nil, nil
+		}
+
+		err = json.Unmarshal(response, &auxBlock)
+		if err != nil {
+			return template, nil, err
+		}
 	}
 
 	return template, &auxBlock, nil

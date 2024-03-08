@@ -5,3 +5,4 @@ GRANT ALL PRIVILEGES ON DATABASE mergedmining TO mergedmining;
 -- \c mergedmining postgres
 GRANT ALL ON SCHEMA public TO mergedmining;
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO mergedmining;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO mergedmining;

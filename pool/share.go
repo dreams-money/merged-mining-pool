@@ -34,7 +34,7 @@ func validateAndWeighShare(primary *bitcoin.BitcoinBlock, aux1 *bitcoin.AuxBlock
 		status = primaryCandidate
 	}
 
-	if aux1 != nil {
+	if aux1.Hash != "" {
 		auxTarget := bitcoin.Target(reverseHexBytes(aux1.Target))
 		auxTargetBig, _ := auxTarget.ToBig()
 

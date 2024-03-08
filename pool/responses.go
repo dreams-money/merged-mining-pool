@@ -129,7 +129,7 @@ func miningAuthorize(request *stratumRequest, client *stratumClient, pool *PoolS
 	minerAddressesString := loginParts[0]
 	// minerAddressString format: primarycoinAddress-auxcoinAddress-auxcoinAddress.rigID
 	minerAddresses := strings.Split(minerAddressesString, "-")
-	if len(minerAddresses) != len(pool.config.BlockchainNodes) {
+	if len(minerAddresses) != len(pool.config.BlockChainOrder) {
 		return authResponse, errors.New("not enough miner addresses to login")
 	}
 

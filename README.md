@@ -14,10 +14,10 @@ Features
   - API service
   - RPC failover
   - Payouts service
+  - Single coin mining
 
 Todo
 ----
-  - Single coin mining
   - Variable difficulty
 
 Getting Started
