@@ -57,7 +57,7 @@ func (p *PoolServer) fetchRpcBlockTemplatesAndCacheWork() error {
 func (p *PoolServer) recieveWorkFromClient(share bitcoin.Work, client *stratumClient) error {
 	primaryBlockTemplate := p.templates.GetPrimary()
 	if primaryBlockTemplate.Template == nil {
-		return errors.New("Primary block template not yet set")
+		return errors.New("primary block template not yet set")
 	}
 	auxBlock := p.templates.GetAux1()
 
@@ -67,7 +67,7 @@ func (p *PoolServer) recieveWorkFromClient(share bitcoin.Work, client *stratumCl
 	workerString := share[0].(string)
 	workerStringParts := strings.Split(workerString, ".")
 	if len(workerStringParts) < 2 {
-		return errors.New("Invalid miner address")
+		return errors.New("invalid miner address")
 	}
 	minerAddress := workerStringParts[0]
 	rigID := workerStringParts[1]
@@ -88,7 +88,7 @@ func (p *PoolServer) recieveWorkFromClient(share bitcoin.Work, client *stratumCl
 		return err
 	}
 
-	shareStatus, shareDifficulty := validateAndWeighShare(&primaryBlockTemplate, auxBlock, share, p.config.PoolDifficulty)
+	shareStatus, shareDifficulty := validateAndWeighShare(&primaryBlockTemplate, auxBlock, p.config.PoolDifficulty)
 
 	heightMessage := fmt.Sprintf("%v", primaryBlockHeight)
 	if shareStatus == dualCandidate {
@@ -154,7 +154,7 @@ func (p *PoolServer) recieveWorkFromClient(share bitcoin.Work, client *stratumCl
 			if err != nil {
 				return err
 			}
-			err = p.submitBlockToChain(primaryBlockTemplate, share)
+			err = p.submitBlockToChain(primaryBlockTemplate)
 		}
 
 		if err != nil {
@@ -183,14 +183,14 @@ func (p *PoolServer) recieveWorkFromClient(share bitcoin.Work, client *stratumCl
 	}
 
 	if shareStatus == dualCandidate || shareStatus == primaryCandidate {
-		err = p.submitBlockToChain(primaryBlockTemplate, share)
+		err = p.submitBlockToChain(primaryBlockTemplate)
 		if err != nil {
 			// Try to submit on different node
 			err = p.rpcManagers[p.config.GetPrimary()].CheckAndRecoverRPCs()
 			if err != nil {
 				return err
 			}
-			err = p.submitBlockToChain(primaryBlockTemplate, share)
+			err = p.submitBlockToChain(primaryBlockTemplate)
 		}
 
 		if err != nil {

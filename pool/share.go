@@ -18,7 +18,7 @@ var statusMap = map[int]string{
 	4: "Dual",
 }
 
-func validateAndWeighShare(primary *bitcoin.BitcoinBlock, aux1 *bitcoin.AuxBlock, share bitcoin.Work, poolDifficulty float64) (int, float64) {
+func validateAndWeighShare(primary *bitcoin.BitcoinBlock, aux1 *bitcoin.AuxBlock, poolDifficulty float64) (int, float64) {
 	primarySum, err := primary.Sum()
 	logOnError(err)
 

@@ -15,11 +15,10 @@ const extranonce1Length = 4
 var numberOfConnections int
 
 type stratumClient struct {
-	ip                    string
-	login                 string
-	extranonce1           string
-	extranonce_subscribed bool
-	userAgent             string
+	ip          string
+	login       string
+	extranonce1 string
+	userAgent   string
 
 	sessionID     string
 	connection    net.Conn

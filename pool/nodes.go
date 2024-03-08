@@ -69,10 +69,10 @@ func (pool *PoolServer) listenForBlockNotifications() error {
 
 	for blockChainName := range pool.activeNodes {
 		subscription, err := pool.createZMQSubscriptionToHashBlock(blockChainName, notifyChannel)
-		defer subscription.Close()
 		if err != nil {
 			return err
 		}
+		defer subscription.Close()
 	}
 
 	for {
@@ -101,7 +101,7 @@ func (pool *PoolServer) listenForBlockNotifications() error {
 }
 
 // Ultimate program OUTPUT
-func (p *PoolServer) submitBlockToChain(block bitcoin.BitcoinBlock, work bitcoin.Work) error {
+func (p *PoolServer) submitBlockToChain(block bitcoin.BitcoinBlock) error {
 	submission, err := block.Submit()
 	if err != nil {
 		return err
