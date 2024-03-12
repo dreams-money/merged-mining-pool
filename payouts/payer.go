@@ -30,8 +30,14 @@ func payoutBalances(config *config.Config, rpcManagers map[string]*rpc.Manager) 
 // TODO move to bitcoin aka the chain package.
 func bitcoinTryManyPayments(balances []persistence.Balance, config *config.Config, rpcManagers map[string]*rpc.Manager) error {
 	transactionsGroupedByChain := make(map[string]map[string]float32)
+
 	for _, balance := range balances {
-		transactionsGroupedByChain[balance.Chain][balance.Address] = balance.Amount
+		chainBalances, exists := transactionsGroupedByChain[balance.Chain]
+		if !exists {
+			chainBalances = make(map[string]float32)
+		}
+		chainBalances[balance.Address] = balance.Amount
+		transactionsGroupedByChain[balance.Chain] = chainBalances
 	}
 
 	for chain, transactions := range transactionsGroupedByChain {
