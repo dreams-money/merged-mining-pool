@@ -29,7 +29,7 @@ func GenerateWork(template *Template, auxBlock *AuxBlock, chainName, arbitrary, 
 
 	block.reversePrevBlockHash, err = reverseHex4Bytes(block.Template.PrevBlockHash)
 	if err != nil {
-		m := "Invalid previous block hash hex: " + err.Error()
+		m := "invalid previous block hash hex: " + err.Error()
 		return nil, nil, errors.New(m)
 	}
 
@@ -57,12 +57,11 @@ func GenerateWork(template *Template, auxBlock *AuxBlock, chainName, arbitrary, 
 	jobCounter++
 
 	return &block, work, nil
-
 }
 
 func (b *BitcoinBlock) MakeHeader(extranonce, nonce, nonceTime string) (string, error) {
 	if b.Template == nil {
-		return "", errors.New("Generate work first")
+		return "", errors.New("generate work first")
 	}
 
 	var err error
@@ -114,10 +113,10 @@ func (b *BitcoinBlock) CoinbaseHashed() (string, error) {
 
 func (b *BitcoinBlock) Sum() (*big.Int, error) {
 	if b.chain == nil {
-		return nil, errors.New("CalculateSum: Missing blockchain interface")
+		return nil, errors.New("calculateSum: Missing blockchain interface")
 	}
 	if b.header == "" {
-		return nil, errors.New("Generate header first")
+		return nil, errors.New("generate header first")
 	}
 
 	digest, err := b.chain.HeaderDigest(b.header)
@@ -142,7 +141,7 @@ func (b *BitcoinBlock) Sum() (*big.Int, error) {
 
 func (b *BitcoinBlock) Submit() (string, error) {
 	if b.header == "" {
-		return "", errors.New("Generate header first")
+		return "", errors.New("generate header first")
 	}
 
 	transactionPool := make([]string, len(b.Template.Transactions))

@@ -57,7 +57,7 @@ func handleStratumRequest(request *stratumRequest, client *stratumClient, pool *
 	case "mining.multi_version":
 		return nil, nil // ignored
 	default:
-		return stratumResponse{}, errors.New("Unknown stratum request method: " + request.Method)
+		return stratumResponse{}, errors.New("unknown stratum request method: " + request.Method)
 	}
 }
 
@@ -65,7 +65,7 @@ func miningSubscribe(request *stratumRequest, client *stratumClient) (stratumRes
 	var response stratumResponse
 
 	if isBanned(client.ip) {
-		return response, errors.New("Client blocked: " + client.ip)
+		return response, errors.New("client blocked: " + client.ip)
 	}
 
 	requestParamsJson, err := request.Params.MarshalJSON()
@@ -107,7 +107,7 @@ func miningAuthorize(request *stratumRequest, client *stratumClient, pool *PoolS
 	var reply stratumRequest
 
 	if isBanned(client.ip) {
-		return reply, errors.New("Banned client attempted to access: " + client.ip)
+		return reply, errors.New("banned client attempted to access: " + client.ip)
 	}
 
 	var params []string
@@ -144,7 +144,7 @@ func miningAuthorize(request *stratumRequest, client *stratumClient, pool *PoolS
 		network := pool.activeNodes[blockChainName].Network
 		if (network == "test" && !blockChain.ValidTestnetAddress(inputBlockChainAddress)) ||
 			(network == "main" && !blockChain.ValidMainnetAddress(inputBlockChainAddress)) {
-			m := "Invalid %v %vnet miner address from %v: %v"
+			m := "invalid %v %vnet miner address from %v: %v"
 			m = fmt.Sprintf(m, blockChainName, network, client.ip, inputBlockChainAddress)
 			return authResponse, errors.New(m)
 		}

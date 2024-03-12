@@ -113,7 +113,7 @@ func (p *PoolServer) submitBlockToChain(block bitcoin.BitcoinBlock) error {
 	success, err := p.GetPrimaryNode().RPC.SubmitBlock(submit)
 
 	if !success || err != nil {
-		return errors.New("⚠️  Node Rejection: " + err.Error())
+		return errors.New("⚠️  node Rejection: " + err.Error())
 	}
 
 	return nil
@@ -123,7 +123,7 @@ func (p *PoolServer) submitAuxBlock(primaryBlock bitcoin.BitcoinBlock, aux1Block
 	auxpow := bitcoin.MakeAuxPow(primaryBlock)
 	success, err := p.GetAux1Node().RPC.SubmitAuxBlock(aux1Block.Hash, auxpow.Serialize())
 	if !success {
-		return errors.New("⚠️  Failed to submit aux block: " + err.Error())
+		return errors.New("⚠️  failed to submit aux block: " + err.Error())
 	}
 	return err
 }

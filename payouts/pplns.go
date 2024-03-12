@@ -80,7 +80,7 @@ func (scheme PPLNS) UpdateMinerBalances(poolID string, blockReward float32, conf
 		usage = fmt.Sprintf(usage, confirmed.BlockHeight)
 		err = persistence.Balances.AddAmount(poolID, confirmed.Chain, miner, usage, reward)
 		if err != nil {
-			context := errors.New("Failed to add balances: ")
+			context := errors.New("failed to add balances: ")
 			return emptyTime, errors.Join(context, err)
 		}
 	}

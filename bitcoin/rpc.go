@@ -140,7 +140,7 @@ func (b BitcoinBlock) RpcSubmit(rpcURL, timeout, submission string) error {
 		return err
 	}
 	if status != 200 {
-		m := "HTTP Status: %v, %v"
+		m := "http status: %v, %v"
 		m = fmt.Sprintf(m, strconv.Itoa(status), string(resp.Result))
 		return errors.New(m)
 	}

@@ -54,10 +54,10 @@ func TargetFromDifficulty(difficulty float64) (Target, big.Accuracy) {
 func TargetFromBits(bitsHex string) (Target, error) {
 	l := len(bitsHex)
 	if l < 8 {
-		return "", errors.New("String too short")
+		return "", errors.New("string too short")
 	}
 	if l%2 == 0 {
-		return "", errors.New("String must be even length")
+		return "", errors.New("string must be even length")
 	}
 
 	exponent := bitsHex[:2]

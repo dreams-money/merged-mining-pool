@@ -84,7 +84,7 @@ func (r *PoolRepository) PoolPerformanceBetween(poolID string, start, end time.T
 	} else if sampleInterval == time.Hour*24 {
 		trunc = "day"
 	} else {
-		return nil, errors.New("Unknown sample interval")
+		return nil, errors.New("unknown sample interval")
 	}
 
 	query := "SELECT date_trunc('%v', created) AS created, "

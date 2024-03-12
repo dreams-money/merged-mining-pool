@@ -34,7 +34,7 @@ func classifyBlocks(blocks persistence.FoundBlocks, rpcManagers map[string]*rpc.
 	for i, localBlock := range blocks {
 		rpcManager, exists = rpcManagers[localBlock.Chain]
 		if !exists {
-			return nil, errors.New("Unlocker failed to find node for: " + localBlock.Chain)
+			return nil, errors.New("unlocker failed to find node for: " + localBlock.Chain)
 		}
 
 		remoteBlock, err := rpcManager.GetActiveClient().GetBlockByHash(localBlock.Hash)

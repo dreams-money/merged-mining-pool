@@ -7,7 +7,7 @@ import (
 
 func reverseHexBytes(hex string) (string, error) {
 	if len(hex)%2 != 0 {
-		return "", errors.New("String must be divisible by 2 to be a byte string")
+		return "", errors.New("string must be divisible by 2 to be a byte string")
 	}
 	o := ""
 	l := len(hex)

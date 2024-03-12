@@ -120,7 +120,7 @@ func (r *BalanceRepository) GetBalance(poolID, chain, address string) (*float32,
 }
 
 func (r *BalanceRepository) GetPoolBalancesOverThreshold(poolID, chain string, minimum float32) ([]Balance, error) {
-	query := `SELECT b.poolid, b.chain, b.address, b.created, b.updated
+	query := `SELECT b.poolid, b.chain, b.address, b.amount, b.created, b.updated
 				FROM balances b
 				LEFT JOIN miner_settings ms
 				ON ms.poolid = b.poolid
@@ -143,7 +143,7 @@ func (r *BalanceRepository) GetPoolBalancesOverThreshold(poolID, chain string, m
 	for rows.Next() {
 		var balance Balance
 
-		err = rows.Scan(&balance.PoolID, &balance.Chain, &balance.Address, &balance.Created, &balance.Updated)
+		err = rows.Scan(&balance.PoolID, &balance.Chain, &balance.Address, &balance.Amount, &balance.Created, &balance.Updated)
 		if err != nil {
 			return nil, err
 		}

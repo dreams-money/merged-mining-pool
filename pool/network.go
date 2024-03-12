@@ -100,7 +100,7 @@ func (pool *PoolServer) handleStratumConnection(client *stratumClient) error {
 		payload, isPrefix, err := connectionBuffer.ReadLine()
 		if err == io.EOF {
 			removeSession(client.sessionID)
-			return errors.New("Client disconnect: " + client.ip)
+			return errors.New("client disconnect: " + client.ip)
 		}
 
 		if isPrefix {

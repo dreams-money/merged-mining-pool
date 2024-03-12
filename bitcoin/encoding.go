@@ -133,7 +133,7 @@ func reverse(b []byte) []byte {
 
 func reverseHexBytes(hex string) (string, error) {
 	if len(hex)%2 != 0 {
-		return "", errors.New("String must be divisible by 2 to be a byte string")
+		return "", errors.New("string must be divisible by 2 to be a byte string")
 	}
 	o := ""
 	l := len(hex)
@@ -145,7 +145,7 @@ func reverseHexBytes(hex string) (string, error) {
 
 func reverseHex4Bytes(hex string) (string, error) {
 	if len(hex)%8 != 0 {
-		return "", errors.New("String must be divisible by 8 to represent 4 byte array")
+		return "", errors.New("string must be divisible by 8 to represent 4 byte array")
 	}
 
 	var o string

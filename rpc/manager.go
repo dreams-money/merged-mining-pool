@@ -63,7 +63,7 @@ func (m *Manager) FindHealthyNode() error {
 	for !nowHealthy {
 		nodesChecked++
 		if nodesChecked > nodesLength {
-			return errors.New("No healthy nodes!")
+			return errors.New("no healthy nodes!")
 		}
 		m.nextNode()
 		nowHealthy = m.checkActiveNodeHealth()
