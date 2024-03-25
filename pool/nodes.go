@@ -17,6 +17,7 @@ type BlockChainNodesMap map[string]blockChainNode // "blockChainName" => activeN
 type blockChainNode struct {
 	NotifyURL          string
 	RPC                *rpc.RPCClient
+	ChainName          string
 	Network            string
 	RewardPubScriptKey string // TODO - this is very bitcoin specific.  Abstract to interface.
 	RewardTo           string
@@ -59,6 +60,7 @@ func (pool *PoolServer) loadBlockchainNodes() {
 			RewardPubScriptKey: rewardPubScriptKey,
 			RewardTo:           nodeConfig.RewardTo,
 			NetworkDifficulty:  chainInfo.NetworkDifficulty,
+			ChainName:          blockChainName,
 		}
 		pool.activeNodes[blockChainName] = newNode
 	}
@@ -114,7 +116,7 @@ func (p *PoolServer) submitBlockToChain(block bitcoin.BitcoinBlock) error {
 	success, err := p.GetPrimaryNode().RPC.SubmitBlock(submit)
 
 	if !success || err != nil {
-		nodeName := p.GetPrimaryNode().RPC.Name
+		nodeName := p.GetPrimaryNode().ChainName
 		m := "⚠️  %v primary node rejection: %v"
 		m = fmt.Sprintf(m, nodeName, err.Error())
 		return errors.New(m)
@@ -127,7 +129,7 @@ func (p *PoolServer) submitAuxBlock(primaryBlock bitcoin.BitcoinBlock, aux1Block
 	auxpow := bitcoin.MakeAuxPow(primaryBlock)
 	success, err := p.GetAux1Node().RPC.SubmitAuxBlock(aux1Block.Hash, auxpow.Serialize())
 	if !success {
-		nodeName := p.GetAux1Node().RPC.Name
+		nodeName := p.GetAux1Node().ChainName
 		m := "⚠️  %v node failed to submit aux block: %v"
 		m = fmt.Sprintf(m, nodeName, err.Error())
 		return errors.New(m)
