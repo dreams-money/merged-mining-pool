@@ -16,6 +16,8 @@ func RunManager(config *config.Config, rpcManagers map[string]*rpc.Manager, inte
 	for {
 		time.Sleep(interval)
 
+		log.Println("Checking block confirmations")
+
 		// Unlock Loop
 		blocks, err = unlockBlocks(config.PoolName, rpcManagers)
 		if err != nil {
