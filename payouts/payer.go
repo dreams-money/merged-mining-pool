@@ -3,6 +3,7 @@ package payouts
 import (
 	"errors"
 	"log"
+	"strings"
 
 	"designs.capital/dogepool/config"
 	"designs.capital/dogepool/persistence"
@@ -31,12 +32,37 @@ func payoutBalances(config *config.Config, rpcManagers map[string]*rpc.Manager) 
 func bitcoinTryManyPayments(balances []persistence.Balance, config *config.Config, rpcManagers map[string]*rpc.Manager) error {
 	transactionsGroupedByChain := make(map[string]map[string]float32)
 
+	mergedMining := len(config.BlockChainOrder) > 1
+
 	for _, balance := range balances {
 		chainBalances, exists := transactionsGroupedByChain[balance.Chain]
 		if !exists {
 			chainBalances = make(map[string]float32)
 		}
-		chainBalances[balance.Address] = balance.Amount
+
+		address := balance.Address
+
+		// TODO - move this to REWARDS
+		if mergedMining {
+			addresses := strings.Split(address, "-")
+			found := false
+			i := 0
+			for _, chain := range config.BlockChainOrder {
+				if chain == balance.Chain {
+					found = true
+					break
+				}
+				i++
+			}
+
+			if !found {
+				return errors.New("chain address not found: " + balance.Chain)
+			}
+
+			address = addresses[i]
+		}
+
+		chainBalances[address] = balance.Amount
 		transactionsGroupedByChain[balance.Chain] = chainBalances
 	}
 
@@ -46,8 +72,7 @@ func bitcoinTryManyPayments(balances []persistence.Balance, config *config.Confi
 			return errors.New("payouts.bitcoinTryManyPayments() - failed to find chain rpc: " + chain)
 		}
 		node := client.GetActiveClient()
-		config := config.Payouts.Chains[chain]
-		transactionID, err := node.SendMany(transactions, config.RewardFrom)
+		transactionID, err := node.SendMany(transactions)
 		if err != nil {
 			return err
 		}

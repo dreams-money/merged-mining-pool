@@ -42,8 +42,9 @@ func (r *RPCClient) GetTransaction(transactionID string) (Transaction, error) {
 	return transaction, err
 }
 
-func (r *RPCClient) SendMany(transactions map[string]float32, from string) (string, error) {
+func (r *RPCClient) SendMany(transactions map[string]float32) (string, error) {
 	params := make([]any, 2)
+	from := ""
 	params[0] = from
 	params[1] = transactions
 

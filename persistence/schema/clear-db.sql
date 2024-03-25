@@ -1,4 +1,4 @@
-SET ROLE miningcore;
+SET ROLE mergedmining;
 
 DROP TABLE shares;
 DROP TABLE blocks;
