@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"log"
 
 	"designs.capital/dogepool/bitcoin"
@@ -113,7 +114,10 @@ func (p *PoolServer) submitBlockToChain(block bitcoin.BitcoinBlock) error {
 	success, err := p.GetPrimaryNode().RPC.SubmitBlock(submit)
 
 	if !success || err != nil {
-		return errors.New("⚠️  node Rejection: " + err.Error())
+		nodeName := p.GetPrimaryNode().RPC.Name
+		m := "⚠️  %v primary node rejection: %v"
+		m = fmt.Sprintf(m, nodeName, err.Error())
+		return errors.New(m)
 	}
 
 	return nil
@@ -123,7 +127,10 @@ func (p *PoolServer) submitAuxBlock(primaryBlock bitcoin.BitcoinBlock, aux1Block
 	auxpow := bitcoin.MakeAuxPow(primaryBlock)
 	success, err := p.GetAux1Node().RPC.SubmitAuxBlock(aux1Block.Hash, auxpow.Serialize())
 	if !success {
-		return errors.New("⚠️  failed to submit aux block: " + err.Error())
+		nodeName := p.GetAux1Node().RPC.Name
+		m := "⚠️  %v node failed to submit aux block: %v"
+		m = fmt.Sprintf(m, nodeName, err.Error())
+		return errors.New(m)
 	}
 	return err
 }
