@@ -39,11 +39,15 @@ func classifyBlocks(blocks persistence.FoundBlocks, rpcManagers map[string]*rpc.
 
 		remoteBlock, err := rpcManager.GetActiveClient().GetBlockByHash(localBlock.Hash)
 		if err != nil {
+			m := "unlocker failed to find remote block for %v block %v, %v"
+			m = fmt.Sprintf(m, localBlock.Chain, localBlock.BlockHeight, localBlock.Hash)
+			context := errors.New(m)
+			err = errors.Join(context, err)
 			return nil, err
 		}
 
 		if len(remoteBlock.Transactions) < 1 {
-			m := "Unlocker failed to fetch transaction confirmation for %v block %v, %v"
+			m := "unlocker failed to fetch transaction confirmation for %v block %v, %v"
 			m = fmt.Sprintf(m, localBlock.Chain, localBlock.BlockHeight, localBlock.Hash)
 			return nil, errors.New(m)
 		}
