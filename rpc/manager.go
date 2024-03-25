@@ -7,13 +7,15 @@ import (
 )
 
 type Manager struct {
+	chainName            string
 	activeIndex          int
 	clients              []*RPCClient
 	primaryCheckInterval time.Duration
 }
 
-func MakeRPCManager(nodes []Config, returnToPrimaryAfter string) Manager {
+func MakeRPCManager(chainName string, nodes []Config, returnToPrimaryAfter string) Manager {
 	m := Manager{}
+	m.chainName = chainName
 	m.clients = make([]*RPCClient, len(nodes))
 	for i, node := range nodes {
 		m.clients[i] = NewRPCClient(node.Name, node.URL, node.Username, node.Password, node.Timeout)
@@ -63,7 +65,7 @@ func (m *Manager) FindHealthyNode() error {
 	for !nowHealthy {
 		nodesChecked++
 		if nodesChecked > nodesLength {
-			return errors.New("no healthy nodes!")
+			return errors.New("no healthy " + m.chainName + " nodes!")
 		}
 		m.nextNode()
 		nowHealthy = m.checkActiveNodeHealth()

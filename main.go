@@ -95,7 +95,7 @@ func makeRPCManagers(configuration *config.Config) map[string]*rpc.Manager {
 			}
 		}
 		// TODO move interval to config if accepted
-		manager := rpc.MakeRPCManager(rpcConfig, "1h")
+		manager := rpc.MakeRPCManager(chain, rpcConfig, "1h")
 		managers[chain] = &manager
 	}
 	return managers
