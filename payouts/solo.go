@@ -10,7 +10,7 @@ import (
 
 type SOLO struct{}
 
-func (SOLO) UpdateMinerBalances(poolID string, remainingReward float32, confirmed persistence.Found) (time.Time, error) {
+func (SOLO) UpdateMinerBalances(poolID string, remainingReward float64, confirmed persistence.Found) (time.Time, error) {
 	log.Printf("Awarding %v %v SOLO reward to miner %v for work on %v block %v\n",
 		remainingReward, confirmed.Chain, confirmed.Miner, confirmed.Chain, confirmed.BlockHeight)
 

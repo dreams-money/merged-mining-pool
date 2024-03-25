@@ -12,7 +12,7 @@ type Payment struct {
 	PoolID                      string
 	Chain                       string
 	Address                     string
-	Amount                      float32
+	Amount                      float64
 	TransactionConfirmationData string
 	Created                     time.Time
 }
@@ -22,7 +22,7 @@ type PaymentRepository struct {
 }
 
 func (r *PaymentRepository) Insert(payment Payment) error {
-	query := "INSERT INTO payments(poolid, coin, address, amount, transactionconfirmationdata, created) "
+	query := "INSERT INTO payments(poolid, chain, address, amount, transactionconfirmationdata, created) "
 	query = query + "VALUES($1, $2, $3, $4, $5, $6)"
 
 	stmt, err := r.DB.Prepare(query)
@@ -41,7 +41,7 @@ func (r *PaymentRepository) InsertBatch(payments []Payment) error {
 		return err
 	}
 
-	fields := pq.CopyIn("poolid", "coin", "address", "amount", "transactionconfirmationdata", "created")
+	fields := pq.CopyIn("poolid", "chain", "address", "amount", "transactionconfirmationdata", "created")
 	stmt, err := txn.Prepare(fields)
 	if err != nil {
 		return err
@@ -69,7 +69,7 @@ func (r *PaymentRepository) InsertBatch(payments []Payment) error {
 }
 
 func (r *PaymentRepository) PagePayments(poolID, miner string, page, pageSize int) ([]Payment, error) {
-	query := "SELECT poolid, coin, address, amount, transactionconfirmationdata, created FROM payments WHERE poolid = $1 "
+	query := "SELECT poolid, chain, address, amount, transactionconfirmationdata, created FROM payments WHERE poolid = $1 "
 	if miner != "" {
 		query = query + " AND address = $4 "
 	}
@@ -205,7 +205,7 @@ func (r *PaymentRepository) MinerPaymentsByDayCount(poolID, miner string) (Payme
 }
 
 func (r *PaymentRepository) MinerLastPayments(poolID, miner string) (map[string]Payment, error) {
-	query := `SELECT poolid, coin, address, amount, transactionconfirmationdata, created
+	query := `SELECT poolid, chain, address, amount, transactionconfirmationdata, created
 
 			FROM payments
 
@@ -214,7 +214,7 @@ func (r *PaymentRepository) MinerLastPayments(poolID, miner string) (map[string]
 				SELECT max(b.created)
 				from payments b
 				where b.poolid = payments.poolid
-				and b.coin = payments.coin
+				and b.chain = payments.chain
 			)`
 
 	rows, err := r.DB.Query(query, poolID, miner)

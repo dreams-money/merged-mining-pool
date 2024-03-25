@@ -48,7 +48,7 @@ type apiConfig struct {
 
 type recipient struct {
 	Address    string  `json:"address"`
-	Percentage float32 `json:"percentage"`
+	Percentage float64 `json:"percentage"`
 }
 type Chain struct {
 	Name                 string

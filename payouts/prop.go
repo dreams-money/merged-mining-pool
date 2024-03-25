@@ -11,7 +11,7 @@ import (
 
 type PROP struct{}
 
-func (PROP) UpdateMinerBalances(poolID string, blockReward float32, confirmed persistence.Found) (time.Time, error) {
+func (PROP) UpdateMinerBalances(poolID string, blockReward float64, confirmed persistence.Found) (time.Time, error) {
 	emptyTime, cutoffTime := time.Time{}, time.Time{}
 	before := confirmed.Created
 	minerShares, minerScores := make(map[string]float64), make(map[string]float64)
@@ -56,13 +56,13 @@ func (PROP) UpdateMinerBalances(poolID string, blockReward float32, confirmed pe
 		before = page[pageLength-1].Created
 	}
 
-	rewardPerScorePoint := blockReward / float32(accumlatedScore)
+	rewardPerScorePoint := blockReward / accumlatedScore
 
 	remainingReward := blockReward
 
-	minerRewards := make(map[string]float32)
+	minerRewards := make(map[string]float64)
 	for miner, score := range minerScores {
-		reward := float32(score) * rewardPerScorePoint
+		reward := score * rewardPerScorePoint
 		minerRewards[miner] += reward
 		remainingReward -= reward
 	}
@@ -74,7 +74,7 @@ func (PROP) UpdateMinerBalances(poolID string, blockReward float32, confirmed pe
 	var err error
 	for miner, reward := range minerRewards {
 		log.Printf("Awarding %v %v PROP reward to miner %v for work on %v block %v\n",
-		reward, confirmed.Chain, confirmed.Miner, confirmed.Chain, confirmed.BlockHeight)
+			reward, confirmed.Chain, confirmed.Miner, confirmed.Chain, confirmed.BlockHeight)
 
 		usage := "PROP REWARD FOR BLOCK %v"
 		usage = fmt.Sprintf(usage, confirmed.BlockHeight)

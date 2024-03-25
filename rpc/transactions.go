@@ -13,7 +13,7 @@ type TransactionDetails struct {
 
 type Transaction struct {
 	TransactionID   string               `json:"txid"`
-	Amount          float32              `json:"amount"`
+	Amount          float64              `json:"amount"`
 	Confirmations   uint                 `json:"confirmations"`
 	Blockhash       string               `json:"blockhash"`
 	Blockheight     uint                 `json:"blockheight"`
@@ -42,7 +42,7 @@ func (r *RPCClient) GetTransaction(transactionID string) (Transaction, error) {
 	return transaction, err
 }
 
-func (r *RPCClient) SendMany(transactions map[string]float32) (string, error) {
+func (r *RPCClient) SendMany(transactions map[string]float64) (string, error) {
 	params := make([]any, 2)
 	from := ""
 	params[0] = from

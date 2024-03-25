@@ -26,7 +26,7 @@ type Found struct {
 	Effort                      float64
 	TransactionConfirmationData string
 	Miner                       string
-	Reward                      float32
+	Reward                      float64
 	Source                      string
 	Hash                        string
 	Created                     time.Time

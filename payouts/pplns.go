@@ -14,7 +14,7 @@ type PPLNS struct {
 	config *config.Config
 }
 
-func (scheme PPLNS) UpdateMinerBalances(poolID string, blockReward float32, confirmed persistence.Found) (time.Time, error) {
+func (scheme PPLNS) UpdateMinerBalances(poolID string, blockReward float64, confirmed persistence.Found) (time.Time, error) {
 	emptyTime, cutoffTime := time.Time{}, time.Time{}
 	before := confirmed.Created
 	inclusive := true
@@ -28,7 +28,7 @@ func (scheme PPLNS) UpdateMinerBalances(poolID string, blockReward float32, conf
 	done := false
 	remainingReward := blockReward
 	accumlatedScore := float64(0)
-	minerRewards := make(map[string]float32)
+	minerRewards := make(map[string]float64)
 	for !done {
 		page, err := persistence.Shares.GetSharesBefore(poolID, before, inclusive, pageSize)
 		if err != nil {
@@ -52,7 +52,7 @@ func (scheme PPLNS) UpdateMinerBalances(poolID string, blockReward float32, conf
 				done = true
 			}
 
-			reward := float32(score * float64(blockReward) / NWindow)
+			reward := score * blockReward / NWindow
 			minerRewards[share.Miner] += reward
 			remainingReward -= reward
 

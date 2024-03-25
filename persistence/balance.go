@@ -9,7 +9,7 @@ type Balance struct {
 	PoolID  string
 	Chain   string
 	Address string
-	Amount  float32
+	Amount  float64
 	Created time.Time
 	Updated time.Time
 }
@@ -28,7 +28,7 @@ type BalanceRepository struct {
 	*sql.DB
 }
 
-func (r *BalanceRepository) AddAmount(poolID, chain, address, usage string, amount float32) error {
+func (r *BalanceRepository) AddAmount(poolID, chain, address, usage string, amount float64) error {
 	now := time.Now()
 
 	// query := "INSERT INTO balance_changes(poolid, chain, address, amount, usage, tags, created) "
@@ -94,7 +94,7 @@ func (r *BalanceRepository) Update(balance Balance) error {
 	return err
 }
 
-func (r *BalanceRepository) GetBalance(poolID, chain, address string) (*float32, error) {
+func (r *BalanceRepository) GetBalance(poolID, chain, address string) (*float64, error) {
 	query := "SELECT amount FROM balances WHERE poolid = $1 AND chain = $2 AND address = $3"
 
 	stmt, err := r.DB.Prepare(query)
@@ -107,7 +107,7 @@ func (r *BalanceRepository) GetBalance(poolID, chain, address string) (*float32,
 		return nil, nil
 	}
 
-	var balance float32
+	var balance float64
 	err = row.Scan(&balance)
 	if err == sql.ErrNoRows {
 		return nil, nil

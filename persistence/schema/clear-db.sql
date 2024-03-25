@@ -36,7 +36,7 @@ CREATE TABLE blocks
 	effort FLOAT NULL,
 	transactionconfirmationdata TEXT NOT NULL,
 	miner TEXT NULL,
-	reward decimal(28,12) NULL,
+	reward decimal(28,8) NULL,
     source TEXT NULL,
     hash TEXT NULL,
 	created TIMESTAMPTZ NOT NULL,
@@ -49,7 +49,7 @@ CREATE TABLE balances
 	poolid TEXT NOT NULL,
 	chain text NOT NULL,
 	address TEXT NOT NULL,
-	amount decimal(28,12) NOT NULL DEFAULT 0,
+	amount decimal(28,8) NOT NULL DEFAULT 0,
 	created TIMESTAMPTZ NOT NULL,
 	updated TIMESTAMPTZ NOT NULL,
 
@@ -62,7 +62,7 @@ CREATE TABLE balance_changes
 	poolid TEXT NOT NULL,
 	chain text NOT NULL,
 	address TEXT NOT NULL,
-	amount decimal(28,12) NOT NULL DEFAULT 0,
+	amount decimal(28,8) NOT NULL DEFAULT 0,
 	usage TEXT NULL,
     tags text[] NULL,
 	created TIMESTAMPTZ NOT NULL
@@ -72,7 +72,7 @@ CREATE TABLE miner_settings
 (
 	poolid TEXT NOT NULL,
 	address TEXT NOT NULL,
-	paymentthreshold decimal(28,12) NOT NULL,
+	paymentthreshold decimal(28,8) NOT NULL,
 	created TIMESTAMPTZ NOT NULL,
 	updated TIMESTAMPTZ NOT NULL,
 
@@ -85,7 +85,7 @@ CREATE TABLE payments
 	poolid TEXT NOT NULL,
 	chain TEXT NOT NULL,
 	address TEXT NOT NULL,
-	amount decimal(28,12) NOT NULL,
+	amount decimal(28,8) NOT NULL,
 	transactionconfirmationdata TEXT NOT NULL,
 	created TIMESTAMPTZ NOT NULL
 );

@@ -20,7 +20,7 @@ func calculateBlockRewards(confirmed persistence.Found, config *config.Config, r
 	return calculateMinerRewards(remainingReward, confirmed, config)
 }
 
-func calculatePoolReward(confirmed persistence.Found, config *config.Config, rpcManager *rpc.Manager) (float32, error) {
+func calculatePoolReward(confirmed persistence.Found, config *config.Config, rpcManager *rpc.Manager) (float64, error) {
 	remainingReward := confirmed.Reward
 	payoutConfig, exists := config.Payouts.Chains[confirmed.Chain]
 	if !exists {
@@ -52,7 +52,7 @@ func calculatePoolReward(confirmed persistence.Found, config *config.Config, rpc
 	return remainingReward, nil
 }
 
-func calculateMinerRewards(remainingReward float32, confirmed persistence.Found, config *config.Config) (time.Time, error) {
+func calculateMinerRewards(remainingReward float64, confirmed persistence.Found, config *config.Config) (time.Time, error) {
 	payoutSchemeName := config.Payouts.Scheme
 	payoutScheme := payoutSchemeFactory(payoutSchemeName, config)
 	return payoutScheme.UpdateMinerBalances(config.PoolName, remainingReward, confirmed)
