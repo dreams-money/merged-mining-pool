@@ -119,6 +119,11 @@ func findBalanceAddress(balance persistence.Balance, config *config.Config) (str
 	address := balance.Address
 	if mergedMining {
 		addresses := strings.Split(balance.Address, "-")
+
+		if len(addresses) == 1 { // Pool reward address
+			return addresses[0], nil
+		}
+
 		found := false
 		i := 0
 		for _, chain := range config.BlockChainOrder {
