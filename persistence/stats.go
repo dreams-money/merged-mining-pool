@@ -66,7 +66,7 @@ func makeMinerStats(poolID string, miners map[string][]MinerWorkerHashAccumulati
 	var err error
 	var successCount int
 	for miner, workers := range miners {
-		differences := getWindowDifferences(now, timeFrom, hashRateCalculationWindow, workers)
+		differences := getWindowDifferences(now, timeFrom, workers)
 
 		// Adjust hash window if it's not full
 		adjustedWindow := adjustHashWindow(differences, hashRateCalculationWindow)
@@ -129,7 +129,7 @@ type StatsCalcWindow struct {
 	endDifference   time.Duration
 }
 
-func getWindowDifferences(now, timeFrom time.Time, hashRateCalculationWindow time.Duration, workers []MinerWorkerHashAccumulation) StatsCalcWindow {
+func getWindowDifferences(now, timeFrom time.Time, workers []MinerWorkerHashAccumulation) StatsCalcWindow {
 	// See README.md for illustration
 	var first, last time.Time
 	first = workers[0].FirstShare

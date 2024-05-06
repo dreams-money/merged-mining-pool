@@ -304,10 +304,6 @@ func (r *ShareRepository) GetAccumulatedUserAgentShareDifficultyBetween(poolID s
 		return userAgentDiffMap, err
 	}
 
-	if err != nil {
-		return userAgentDiffMap, err
-	}
-
 	for rows.Next() {
 		var userAgent string
 		var difficulty float64
