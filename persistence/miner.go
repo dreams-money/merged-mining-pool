@@ -142,6 +142,9 @@ func (r *MinerRepository) GetMinerStatsReport(poolID, address string, payments *
 	shares := `SELECT SUM(difficulty) FROM shares WHERE poolid = $1 AND miner = $2`
 	row := r.DB.QueryRow(shares, poolID, address)
 	err := row.Scan(&report.PendingShares)
+	if err != nil {
+		return &report, err
+	}
 
 	var chain string
 	var amount float32
@@ -153,7 +156,9 @@ func (r *MinerRepository) GetMinerStatsReport(poolID, address string, payments *
 	}
 	for rows.Next() {
 		err = rows.Scan(&chain, &amount)
-
+		if err != nil {
+			return &report, err
+		}
 		account, found := accounts[chain]
 		if !found {
 			account = MinerAccount{}
@@ -170,7 +175,9 @@ func (r *MinerRepository) GetMinerStatsReport(poolID, address string, payments *
 	}
 	for rows.Next() {
 		err = rows.Scan(&chain, &amount)
-
+		if err != nil {
+			return &report, err
+		}
 		account, found := accounts[chain]
 		if !found {
 			account = MinerAccount{}
@@ -188,7 +195,9 @@ func (r *MinerRepository) GetMinerStatsReport(poolID, address string, payments *
 	}
 	for rows.Next() {
 		err = rows.Scan(&chain, &amount)
-
+		if err != nil {
+			return &report, err
+		}
 		account, found := accounts[chain]
 		if !found {
 			account = MinerAccount{}
@@ -323,7 +332,7 @@ func (r *MinerRepository) GetMinerPerformanceBetweenTimesAtInterval(poolID, addr
 
 	intervalString, intervalExists := intervalMap[interval]
 	if !intervalExists {
-		return nil, errors.New("Invalid input interval")
+		return nil, errors.New("invalid input interval")
 	}
 
 	query := `SELECT poolid, miner, worker, date_trunc('%v', created) AS created, AVG(hashrate) AS hashrate,
@@ -331,7 +340,7 @@ func (r *MinerRepository) GetMinerPerformanceBetweenTimesAtInterval(poolID, addr
 	WHERE poolid = $1 AND miner = $2 AND created >= $3 AND created <= $4
 	GROUP BY date_trunc('%v', created), worker
 	ORDER BY created, worker;`
-	query = fmt.Sprintf(query, intervalString)
+	query = fmt.Sprintf(query, intervalString, intervalString)
 
 	stmt, err := r.DB.Prepare(query)
 	if err != nil {

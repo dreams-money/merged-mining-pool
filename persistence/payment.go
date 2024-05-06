@@ -221,6 +221,9 @@ func (r *PaymentRepository) MinerLastPayments(poolID, miner string) (map[string]
 	if rows == nil {
 		return nil, nil
 	}
+	if err != nil {
+		return nil, err
+	}
 
 	payments := make(map[string]Payment)
 	for rows.Next() {
