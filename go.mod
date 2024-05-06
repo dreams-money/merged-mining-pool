@@ -3,12 +3,14 @@ module designs.capital/dogepool
 go 1.20
 
 require (
+	github.com/go-zeromq/zmq4 v0.16.0
+	github.com/google/uuid v1.6.0
+	github.com/lib/pq v1.10.9
+	golang.org/x/crypto v0.23.0
+)
+
+require (
 	github.com/go-zeromq/goczmq/v4 v4.2.2 // indirect
-	github.com/go-zeromq/zmq4 v0.15.0 // indirect
-	github.com/google/uuid v1.4.0 // indirect
-	github.com/lib/pq v1.10.9 // indirect
-	golang.org/x/crypto v0.11.0 // indirect
-	golang.org/x/sync v0.0.0-20220601150217-0de741cfad7f // indirect
-	golang.org/x/sys v0.10.0 // indirect
-	golang.org/x/text v0.11.0 // indirect
+	golang.org/x/sync v0.7.0 // indirect
+	golang.org/x/text v0.15.0 // indirect
 )
