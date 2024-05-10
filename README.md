@@ -9,8 +9,8 @@ A high-performance Merged Mining Pool Software centered around Doge/Litecoin
 Features
 --------
   - Stratum Networking.  Tested for 1000+ concurrent clients.
-  - ZMQ subscriptions for instant communication with the blockchain  
-  - Unique extranonce generation for parallel clients
+  - ZMQ subscriptions for real-time communication with the blockchain  
+  - Unique extranonce generation for a parallel client workload
   - Merged mining for resource efficiency
   - API service for a front-end website
   - RPC failover for high availability
