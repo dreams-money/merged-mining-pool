@@ -2,6 +2,7 @@ Merged Mining Pool
 ==================
 
 A high-performance Merged Mining Pool Software centered around Doge/Litecoin
+
 ![Dogecoin Logo](https://user-images.githubusercontent.com/5210627/256921635-3b7c1d9e-0148-4953-890e-5f57758973a4.png)
 ![Litecoin Logo](https://user-images.githubusercontent.com/5210627/256921657-11899bf5-995b-47ce-b7af-f7ee03d4da32.png)
 
