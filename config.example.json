@@ -2,7 +2,7 @@
     "pool_name": "testing",
     "port": "3643",
     "max_connections": 99,
-    "connection_timeout": "10s",
+    "connection_timeout": "60s",
     // You'll need to adjust this depending on how much hashrate you have.  This is good for CPU mining on testnet.
     "pool_difficulty": 100,
     // Arbitrary data to add to every block
