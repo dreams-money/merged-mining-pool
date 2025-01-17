@@ -3,7 +3,8 @@
     "port": "3643",
     "max_connections": 99,
     "connection_timeout": "10s",
-    "pool_difficulty": 2000,
+    // You'll need to adjust this depending on how much hashrate you have.  This is good for CPU mining on testnet.
+    "pool_difficulty": 100,
     // Arbitrary data to add to every block
     "block_signature": "ShowUrFace2DefeatWChinHi",
     // If you have multiple chains, what order should they be considered in
