@@ -1,5 +1,5 @@
 {
-    "pool_name": "TESTNET - Merged Mining",
+    "pool_name": "testing",
     "port": "3643",
     "max_connections": 99,
     "connection_timeout": "10s",
@@ -15,42 +15,42 @@
     "blockchains": {
         "dogecoin": [
             {
-                "name": "localhost",
+                "name": "test 1",
                 "rpc_url": "http://127.0.0.1:44555",
                 "rpc_username": "asdf",
                 "rpc_password": "asdf",
                 "block_notify_url": "tcp://localhost:1222",
                 "timeout": "10s",
-                "reward_to": "nc9AHNBPksJbf6wig78zE8BMmKND6hLvnc"
+                "reward_to": "ni84FYCNHkLd5WWERKWoGhdZqdkM9EDHox"
             },
             {
-                "name": "backup",
+                "name": "test 2",
                 "rpc_url": "http://192.1.1.1:44555",
                 "rpc_username": "asdf",
                 "rpc_password": "asdf",
-                "block_notify_url": "tcp://localhost:1222",
+                "block_notify_url": "tcp://192.1.1.1:1222",
                 "timeout": "10s",
-                "reward_to": "nc9AHNBPksJbf6wig78zE8BMmKND6hLvnc"
+                "reward_to": "ni84FYCNHkLd5WWERKWoGhdZqdkM9EDHox"
             }
         ],
         "litecoin": [
             {
-                "name": "localhost",
-                "rpc_url": "http://127.0.0.1:44555",
+                "name": "test 1",
+                "rpc_url": "http://127.0.0.1:19332",
                 "rpc_username": "asdf",
                 "rpc_password": "asdf",
-                "block_notify_url": "tcp://localhost:1222",
+                "block_notify_url": "tcp://localhost:1224",
                 "timeout": "10s",
-                "reward_to": "tltc1qyxmwasu29zxde5cuyc6m603c2x2lxlm0cq3gx7"
+                "reward_to": "tltc1qhsxmudxjk0ew6g7qwefpslwrurz8uxpchp4rur"
             },
             {
-                "name": "backup",
-                "rpc_url": "http://192.1.1.1:44555",
+                "name": "test 2",
+                "rpc_url": "http://192.1.1.1:19332",
                 "rpc_username": "asdf",
                 "rpc_password": "asdf",
-                "block_notify_url": "tcp://localhost:1222",
+                "block_notify_url": "tcp://localhost:1224",
                 "timeout": "10s",
-                "reward_to": "tltc1qyxmwasu29zxde5cuyc6m603c2x2lxlm0cq3gx7"
+                "reward_to": "tltc1qhsxmudxjk0ew6g7qwefpslwrurz8uxpchp4rur"
             }
         ]
     },
@@ -63,9 +63,9 @@
     "persistence": {
         "host": "127.0.0.1",
         "port": 5432,
-        "user": "merged_mining",
-        "password": "bXVxE8AyeSAMPLESdscfTSAMPLE9TWQ",
-        "database": "merged_mining",
+        "user": "mergedmining",
+        "password": "asdfasdf",
+        "database": "mergedmining",
         "sslmode": "disable"
     },
     "payouts": {
@@ -75,10 +75,10 @@
         "chains": {
             "litecoin": {
                 // Can be different than reward_to I.e. PPS
-                "reward_from": "tltc1qyxmwasu29zxde5cuyc6m603c2x2lxlm0cq3gx7",
+                "reward_from": "tltc1qhsxmudxjk0ew6g7qwefpslwrurz8uxpchp4rur",
                 "pool_rewards": [
                     {
-                        "address": "tltc1qyxmwasu29zxde5cuyc6m603c2x2lxlm0cq3gx7",
+                        "address": "tltc1qhsxmudxjk0ew6g7qwefpslwrurz8uxpchp4rur",
                         "percentage": 0.01
                     }
                 ],
@@ -86,10 +86,10 @@
             },
             "dogecoin": {
                 // Can be different than reward_to I.e. PPS
-                "reward_from": "nc9AHNBPksJbf6wig78zE8BMmKND6hLvnc",
+                "reward_from": "ni84FYCNHkLd5WWERKWoGhdZqdkM9EDHox",
                 "pool_rewards": [
                     {
-                        "address": "nc9AHNBPksJbf6wig78zE8BMmKND6hLvnc",
+                        "address": "ni84FYCNHkLd5WWERKWoGhdZqdkM9EDHox",
                         "percentage": 0.01
                     }
                 ],

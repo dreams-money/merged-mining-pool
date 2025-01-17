@@ -21,4 +21,5 @@ CREATE INDEX IDX_SHARES_CREATED ON SHARES(created);
 CREATE INDEX IDX_SHARES_MINER_DIFFICULTY on SHARES(miner, difficulty);
 
 /* Repeat for every pool */
-CREATE TABLE shares_mypool1 PARTITION OF shares FOR VALUES IN ('mypool1');
+/* CREATE TABLE shares_<poolname> PARTITION OF shares FOR VALUES IN ('<poolname>');*/
+CREATE TABLE shares_testing PARTITION OF shares FOR VALUES IN ('testing');
